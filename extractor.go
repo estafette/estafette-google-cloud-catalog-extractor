@@ -89,7 +89,7 @@ func (e *extractor) runClouds(ctx context.Context, parentEntity *contracts.Catal
 	}
 
 	// fetch projects for each cloud
-	err = e.loopEntitiesInParallel(ctx, desiredClouds, func(ctx context.Context, entity *contracts.CatalogEntity) error {
+	err = e.loopEntitiesInParallel(ctx, 10, desiredClouds, func(ctx context.Context, entity *contracts.CatalogEntity) error {
 		return e.runProjects(ctx, entity)
 	})
 	if err != nil {
@@ -121,7 +121,7 @@ func (e *extractor) runProjects(ctx context.Context, parentEntity *contracts.Cat
 	}
 
 	// fetch gke clusters for each project
-	err = e.loopEntitiesInParallel(ctx, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) error {
+	err = e.loopEntitiesInParallel(ctx, 5, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) error {
 		return e.runGKEClusters(ctx, entity)
 	})
 	if err != nil {
@@ -129,7 +129,7 @@ func (e *extractor) runProjects(ctx context.Context, parentEntity *contracts.Cat
 	}
 
 	// fetch pubsub topics for each project
-	err = e.loopEntitiesInParallel(ctx, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) error {
+	err = e.loopEntitiesInParallel(ctx, 5, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) error {
 		return e.runPubSubTopics(ctx, entity)
 	})
 	if err != nil {
@@ -230,9 +230,8 @@ func (e *extractor) syncEntities(ctx context.Context, currentEntities []*contrac
 	return nil
 }
 
-func (e *extractor) loopEntitiesInParallel(ctx context.Context, entities []*contracts.CatalogEntity, runFunction func(ctx context.Context, entity *contracts.CatalogEntity) error) (err error) {
+func (e *extractor) loopEntitiesInParallel(ctx context.Context, concurrency int, entities []*contracts.CatalogEntity, runFunction func(ctx context.Context, entity *contracts.CatalogEntity) error) (err error) {
 	// http://jmoiron.net/blog/limiting-concurrency-in-go/
-	concurrency := 10
 	semaphore := make(chan bool, concurrency)
 
 	resultChannel := make(chan error, len(entities))
