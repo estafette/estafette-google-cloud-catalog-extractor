@@ -129,15 +129,27 @@ func (c *googleCloudClient) GetPubSubTopics(ctx context.Context, parentEntity *c
 	// https://cloud.google.com/pubsub/docs/reference/rest/v1/projects.topics/list
 
 	googlePubsubTopics := make([]*pubsubv1.Topic, 0)
+	nextPageToken := ""
 
-	listCall := c.pubsubv1Service.Projects.Topics.List(parentEntity.Value)
+	for {
+		// retrieving pubsub topics (by page)
+		listCall := c.pubsubv1Service.Projects.Topics.List(parentEntity.Value)
+		if nextPageToken != "" {
+			listCall.PageToken(nextPageToken)
+		}
 
-	resp, err := listCall.Do()
-	if err != nil {
-		return topics, err
+		resp, err := listCall.Do()
+		if err != nil {
+			return topics, err
+		}
+
+		googlePubsubTopics = append(googlePubsubTopics, resp.Topics...)
+
+		if resp.NextPageToken == "" {
+			break
+		}
+		nextPageToken = resp.NextPageToken
 	}
-
-	googlePubsubTopics = append(googlePubsubTopics, resp.Topics...)
 
 	topics = make([]*contracts.CatalogEntity, 0)
 	for _, topic := range googlePubsubTopics {
