@@ -129,7 +129,10 @@ func (e *extractor) syncEntities(ctx context.Context, currentEntities []*contrac
 		}
 		if !isCurrent {
 			// create
-			e.apiClient.CreateCatalogEntity(ctx, de)
+			err = e.apiClient.CreateCatalogEntity(ctx, de)
+			if err != nil {
+				return
+			}
 		}
 	}
 
@@ -139,12 +142,18 @@ func (e *extractor) syncEntities(ctx context.Context, currentEntities []*contrac
 			if cd.Value == de.Value {
 				isDesired = true
 				// update
-				e.apiClient.UpdateCatalogEntity(ctx, de)
+				err = e.apiClient.UpdateCatalogEntity(ctx, de)
+				if err != nil {
+					return
+				}
 			}
 		}
 		if !isDesired && deleteIfNotDesired {
 			// delete
-			e.apiClient.DeleteCatalogEntity(ctx, cd)
+			err = e.apiClient.DeleteCatalogEntity(ctx, cd)
+			if err != nil {
+				return
+			}
 		}
 	}
 
