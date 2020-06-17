@@ -128,13 +128,13 @@ func (e *extractor) runProjects(ctx context.Context, parentEntity *contracts.Cat
 		return err
 	}
 
-	// fetch pubsub topics for each project
-	err = e.loopEntitiesInParallel(ctx, 5, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) error {
-		return e.runPubSubTopics(ctx, entity)
-	})
-	if err != nil {
-		return err
-	}
+	// // fetch pubsub topics for each project
+	// err = e.loopEntitiesInParallel(ctx, 5, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) error {
+	// 	return e.runPubSubTopics(ctx, entity)
+	// })
+	// if err != nil {
+	// 	return err
+	// }
 
 	return nil
 }
