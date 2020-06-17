@@ -35,9 +35,10 @@ const (
 	organizationKeyName = "organization"
 	cloudKeyName        = "cloud"
 	projectKeyName      = "project"
-
-	cloudKeyValue = "Google Cloud"
+	gkeClusterKeyName   = "gke-cluster"
 )
+
+const cloudKeyValue = "Google Cloud"
 
 func main() {
 

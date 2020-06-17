@@ -6,12 +6,13 @@ import (
 	contracts "github.com/estafette/estafette-ci-contracts"
 	"golang.org/x/oauth2/google"
 	crmv1 "google.golang.org/api/cloudresourcemanager/v1"
-	crmv2 "google.golang.org/api/cloudresourcemanager/v2"
+	containerv1 "google.golang.org/api/container/v1"
 	iam "google.golang.org/api/iam/v1"
 )
 
 type GoogleCloudClient interface {
 	GetProjects(ctx context.Context, parentEntity *contracts.CatalogEntity) (projects []*contracts.CatalogEntity, err error)
+	GetGKEClusters(ctx context.Context, parentEntity *contracts.CatalogEntity) (clusters []*contracts.CatalogEntity, err error)
 }
 
 // NewGoogleCloudClient returns a new GoogleCloudClient
@@ -28,20 +29,20 @@ func NewGoogleCloudClient(ctx context.Context) (GoogleCloudClient, error) {
 		return nil, err
 	}
 
-	crmv2Service, err := crmv2.New(googleClient)
+	containerv1Service, err := containerv1.New(googleClient)
 	if err != nil {
 		return nil, err
 	}
 
 	return &googleCloudClient{
-		crmv1Service: crmv1Service,
-		crmv2Service: crmv2Service,
+		crmv1Service:       crmv1Service,
+		containerv1Service: containerv1Service,
 	}, nil
 }
 
 type googleCloudClient struct {
-	crmv1Service *crmv1.Service
-	crmv2Service *crmv2.Service
+	crmv1Service       *crmv1.Service
+	containerv1Service *containerv1.Service
 }
 
 func (c *googleCloudClient) GetProjects(ctx context.Context, parentEntity *contracts.CatalogEntity) (projects []*contracts.CatalogEntity, err error) {
@@ -78,6 +79,35 @@ func (c *googleCloudClient) GetProjects(ctx context.Context, parentEntity *contr
 			ParentValue: parentEntity.Value,
 			Key:         projectKeyName,
 			Value:       p.ProjectId,
+			Labels:      parentEntity.Labels,
+		})
+	}
+
+	return
+}
+
+func (c *googleCloudClient) GetGKEClusters(ctx context.Context, parentEntity *contracts.CatalogEntity) (clusters []*contracts.CatalogEntity, err error) {
+
+	// https://cloud.google.com/kubernetes-engine/docs/reference/rest/v1/projects.zones.clusters/list
+
+	googleClusters := make([]*containerv1.Cluster, 0)
+
+	listCall := c.containerv1Service.Projects.Zones.Clusters.List(parentEntity.Value, "-")
+
+	resp, err := listCall.Do()
+	if err != nil {
+		return clusters, err
+	}
+
+	googleClusters = append(googleClusters, resp.Clusters...)
+
+	clusters = make([]*contracts.CatalogEntity, 0)
+	for _, cluster := range googleClusters {
+		clusters = append(clusters, &contracts.CatalogEntity{
+			ParentKey:   parentEntity.Key,
+			ParentValue: parentEntity.Value,
+			Key:         gkeClusterKeyName,
+			Value:       cluster.Zone + "/" + cluster.Name,
 			Labels:      parentEntity.Labels,
 		})
 	}

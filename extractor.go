@@ -45,7 +45,7 @@ func (e *extractor) Run(ctx context.Context, organization string) (err error) {
 	}
 
 	// ensure cloud entity exists
-	err = e.runCloud(ctx, organizationEntity)
+	err = e.runClouds(ctx, organizationEntity)
 	if err != nil {
 		return
 	}
@@ -62,24 +62,24 @@ func (e *extractor) init(ctx context.Context) (err error) {
 	return nil
 }
 
-func (e *extractor) runCloud(ctx context.Context, organizationEntity *contracts.CatalogEntity) (err error) {
+func (e *extractor) runClouds(ctx context.Context, parentEntity *contracts.CatalogEntity) (err error) {
 
-	if organizationEntity.Key != organizationKeyName {
-		return fmt.Errorf("Parent key is invalid; %v instead of %v", organizationEntity.Key, organizationKeyName)
+	if parentEntity.Key != organizationKeyName {
+		return fmt.Errorf("Parent key is invalid; %v instead of %v", parentEntity.Key, organizationKeyName)
 	}
 
-	currentClouds, err := e.apiClient.GetCatalogEntities(ctx, organizationEntity.Key, organizationEntity.Value, cloudKeyName)
+	currentClouds, err := e.apiClient.GetCatalogEntities(ctx, parentEntity.Key, parentEntity.Value, cloudKeyName)
 	if err != nil {
 		return err
 	}
 
 	desiredClouds := []*contracts.CatalogEntity{
 		{
-			ParentKey:   organizationEntity.Key,
-			ParentValue: organizationEntity.Value,
+			ParentKey:   parentEntity.Key,
+			ParentValue: parentEntity.Value,
 			Key:         cloudKeyName,
 			Value:       cloudKeyValue,
-			Labels:      organizationEntity.Labels,
+			Labels:      parentEntity.Labels,
 		},
 	}
 
@@ -88,17 +88,20 @@ func (e *extractor) runCloud(ctx context.Context, organizationEntity *contracts.
 		return err
 	}
 
-	for _, dc := range desiredClouds {
-		err = e.runProjects(ctx, dc)
-		if err != nil {
-			return err
-		}
+	// fetch projects for each cloud
+	err = e.loopEntitiesInParallel(ctx, desiredClouds, func(ctx context.Context, entity *contracts.CatalogEntity) error { return e.runProjects(ctx, entity) })
+	if err != nil {
+		return err
 	}
 
 	return nil
 }
 
 func (e *extractor) runProjects(ctx context.Context, parentEntity *contracts.CatalogEntity) (err error) {
+
+	if parentEntity.Key != cloudKeyName {
+		return fmt.Errorf("Parent key is invalid; %v instead of %v", parentEntity.Key, cloudKeyName)
+	}
 
 	currentProjects, err := e.apiClient.GetCatalogEntities(ctx, parentEntity.Key, parentEntity.Value, projectKeyName)
 	if err != nil {
@@ -111,6 +114,36 @@ func (e *extractor) runProjects(ctx context.Context, parentEntity *contracts.Cat
 	}
 
 	err = e.syncEntities(ctx, currentProjects, desiredProjects, true)
+	if err != nil {
+		return err
+	}
+
+	// fetch gke clusters for each project
+	err = e.loopEntitiesInParallel(ctx, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) error { return e.runGKEClusters(ctx, entity) })
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (e *extractor) runGKEClusters(ctx context.Context, parentEntity *contracts.CatalogEntity) (err error) {
+
+	if parentEntity.Key != projectKeyName {
+		return fmt.Errorf("Parent key is invalid; %v instead of %v", parentEntity.Key, projectKeyName)
+	}
+
+	currentGKEClusters, err := e.apiClient.GetCatalogEntities(ctx, parentEntity.Key, parentEntity.Value, gkeClusterKeyName)
+	if err != nil {
+		return err
+	}
+
+	desiredGKEClusters, err := e.googleCloudClient.GetGKEClusters(ctx, parentEntity)
+	if err != nil {
+		return err
+	}
+
+	err = e.syncEntities(ctx, currentGKEClusters, desiredGKEClusters, true)
 	if err != nil {
 		return err
 	}
@@ -155,6 +188,39 @@ func (e *extractor) syncEntities(ctx context.Context, currentEntities []*contrac
 			if err != nil {
 				return
 			}
+		}
+	}
+
+	return nil
+}
+
+func (e *extractor) loopEntitiesInParallel(ctx context.Context, entities []*contracts.CatalogEntity, runFunction func(ctx context.Context, entity *contracts.CatalogEntity) error) (err error) {
+	// http://jmoiron.net/blog/limiting-concurrency-in-go/
+	concurrency := 10
+	semaphore := make(chan bool, concurrency)
+
+	resultChannel := make(chan error, len(entities))
+
+	for _, entity := range entities {
+		// try to fill semaphore up to it's full size otherwise wait for a routine to finish
+		semaphore <- true
+
+		go func(ctx context.Context, entity *contracts.CatalogEntity) {
+			// lower semaphore once the routine's finished, making room for another one to start
+			defer func() { <-semaphore }()
+			resultChannel <- runFunction(ctx, entity)
+		}(ctx, entity)
+	}
+
+	// try to fill semaphore up to it's full size which only succeeds if all routines have finished
+	for i := 0; i < cap(semaphore); i++ {
+		semaphore <- true
+	}
+
+	close(resultChannel)
+	for err := range resultChannel {
+		if err != nil {
+			return err
 		}
 	}
 
