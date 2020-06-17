@@ -145,7 +145,7 @@ func (c *apiClient) getCatalogEntitiesPage(ctx context.Context, parentKey, paren
 	// unmarshal json body
 	err = json.Unmarshal(responseBody, &listResponse)
 	if err != nil {
-		log.Error().Err(err).Str("body", string(responseBody)).Msgf("Failed unmarshalling get catalog entities response")
+		log.Error().Err(err).Str("body", string(responseBody)).Str("url", getCatalogEntitiesURL).Msgf("Failed unmarshalling get catalog entities response")
 		return
 	}
 
