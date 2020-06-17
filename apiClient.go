@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -113,7 +114,22 @@ func (c *apiClient) getCatalogEntitiesPage(ctx context.Context, parentKey, paren
 
 	span.LogKV("page[number]", pageNumber, "page[size]", pageSize)
 
-	getCatalogEntitiesURL := fmt.Sprintf("%v/api/catalog/entities?filter[parent]=%v=%v&filter[entity]=%v&page[number]=%v&page[size]=%v", parentKey, parentValue, entityKey, c.apiBaseURL, pageNumber, pageSize)
+	parentFilter := ""
+	if parentKey != "" {
+		parentFilter = parentKey
+		if parentValue != "" {
+			parentFilter = "=" + parentValue
+		}
+
+		parentFilter = "&filter[parent]=" + url.QueryEscape(parentFilter)
+	}
+
+	entityFilter := ""
+	if entityKey != "" {
+		entityFilter = "&filter[entity]=" + url.QueryEscape(entityKey)
+	}
+
+	getCatalogEntitiesURL := fmt.Sprintf("%v/api/catalog/entities?page[number]=%v&page[size]=%v%v%v", c.apiBaseURL, pageNumber, pageSize, parentFilter, entityFilter)
 	headers := map[string]string{
 		"Authorization": fmt.Sprintf("Bearer %v", c.token),
 		"Content-Type":  "application/json",
