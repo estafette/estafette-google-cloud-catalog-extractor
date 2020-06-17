@@ -16,7 +16,6 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/rs/zerolog/log"
 	"github.com/sethgrid/pester"
-	crmv1 "google.golang.org/api/cloudresourcemanager/v1"
 )
 
 type ApiClient interface {
@@ -114,13 +113,13 @@ func (c *apiClient) getCatalogEntitiesPage(ctx context.Context, parentKey, paren
 
 	span.LogKV("page[number]", pageNumber, "page[size]", pageSize)
 
-	getOrganizationsURL := fmt.Sprintf("%v/api/catalog/entities?filter[parent]=%v=%v&filter[entity]=%v&page[number]=%v&page[size]=%v", parentKey, parentValue, entityKey, c.apiBaseURL, pageNumber, pageSize)
+	getCatalogEntitiesURL := fmt.Sprintf("%v/api/catalog/entities?filter[parent]=%v=%v&filter[entity]=%v&page[number]=%v&page[size]=%v", parentKey, parentValue, entityKey, c.apiBaseURL, pageNumber, pageSize)
 	headers := map[string]string{
 		"Authorization": fmt.Sprintf("Bearer %v", c.token),
 		"Content-Type":  "application/json",
 	}
 
-	responseBody, err := c.getRequest(getOrganizationsURL, span, nil, headers)
+	responseBody, err := c.getRequest(getCatalogEntitiesURL, span, nil, headers)
 
 	var listResponse struct {
 		Items      []*contracts.CatalogEntity `json:"items"`
@@ -130,7 +129,7 @@ func (c *apiClient) getCatalogEntitiesPage(ctx context.Context, parentKey, paren
 	// unmarshal json body
 	err = json.Unmarshal(responseBody, &listResponse)
 	if err != nil {
-		log.Error().Err(err).Str("body", string(responseBody)).Msgf("Failed unmarshalling get organizations response")
+		log.Error().Err(err).Str("body", string(responseBody)).Msgf("Failed unmarshalling get catalog entities response")
 		return
 	}
 
@@ -155,13 +154,13 @@ func (c *apiClient) CreateCatalogEntity(ctx context.Context, entity *contracts.C
 		return
 	}
 
-	createEntityURL := fmt.Sprintf("%v/api/catalog/entities", c.apiBaseURL)
+	createCatalogEntityURL := fmt.Sprintf("%v/api/catalog/entities", c.apiBaseURL)
 	headers := map[string]string{
 		"Authorization": fmt.Sprintf("Bearer %v", c.token),
 		"Content-Type":  "application/json",
 	}
 
-	_, err = c.postRequest(createEntityURL, span, strings.NewReader(string(bytes)), headers, http.StatusCreated)
+	_, err = c.postRequest(createCatalogEntityURL, span, strings.NewReader(string(bytes)), headers, http.StatusCreated)
 
 	return
 }
@@ -180,13 +179,13 @@ func (c *apiClient) UpdateCatalogEntity(ctx context.Context, entity *contracts.C
 		return
 	}
 
-	updateEntityURL := fmt.Sprintf("%v/api/catalog/entities/%v", c.apiBaseURL, entity.ID)
+	updateCatalogEntityURL := fmt.Sprintf("%v/api/catalog/entities/%v", c.apiBaseURL, entity.ID)
 	headers := map[string]string{
 		"Authorization": fmt.Sprintf("Bearer %v", c.token),
 		"Content-Type":  "application/json",
 	}
 
-	_, err = c.putRequest(updateEntityURL, span, strings.NewReader(string(bytes)), headers)
+	_, err = c.putRequest(updateCatalogEntityURL, span, strings.NewReader(string(bytes)), headers)
 
 	return
 }
@@ -203,13 +202,13 @@ func (c *apiClient) DeleteCatalogEntity(ctx context.Context, entity *contracts.C
 		return
 	}
 
-	deleteEntityURL := fmt.Sprintf("%v/api/catalog/entities/%v", c.apiBaseURL, entity.ID)
+	deleteCatalogEntityURL := fmt.Sprintf("%v/api/catalog/entities/%v", c.apiBaseURL, entity.ID)
 	headers := map[string]string{
 		"Authorization": fmt.Sprintf("Bearer %v", c.token),
 		"Content-Type":  "application/json",
 	}
 
-	_, err = c.deleteRequest(deleteEntityURL, span, strings.NewReader(string(bytes)), headers)
+	_, err = c.deleteRequest(deleteCatalogEntityURL, span, strings.NewReader(string(bytes)), headers)
 
 	return
 }
@@ -229,84 +228,6 @@ func (c *apiClient) AddLabelIfMissing(ctx context.Context, entity *contracts.Cat
 			})
 		}
 	}
-}
-
-func (c *apiClient) GetClouds(ctx context.Context, organization string) (clouds []*contracts.CatalogEntity, err error) {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "ApiClient::GetClouds")
-	defer span.Finish()
-
-	return c.GetCatalogEntities(ctx, organizationKeyName, organization, cloudKeyValue)
-}
-
-func (c *apiClient) CreateCloud(ctx context.Context, organization string, labels []contracts.Label) (err error) {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "ApiClient::CreateCloud")
-	defer span.Finish()
-
-	entity := &contracts.CatalogEntity{
-		ParentKey:   organizationKeyName,
-		ParentValue: organization,
-		Key:         cloudKeyName,
-		Value:       cloudKeyValue,
-	}
-
-	return c.CreateCatalogEntity(ctx, entity)
-}
-
-func (c *apiClient) UpdateCloud(ctx context.Context, currentCloud *contracts.CatalogEntity, labels []contracts.Label) (err error) {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "ApiClient::UpdateCloud")
-	defer span.Finish()
-
-	// ensure currentCloud is of the right type
-	if currentCloud.Key != cloudKeyName {
-		return fmt.Errorf("Entity is not a valid cloud entity, but of type %v", currentCloud.Key)
-	}
-
-	return c.UpdateCatalogEntity(ctx, currentCloud)
-}
-
-func (c *apiClient) GetProjects(ctx context.Context) (projects []*contracts.CatalogEntity, err error) {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "ApiClient::GetProjects")
-	defer span.Finish()
-
-	return c.GetCatalogEntities(ctx, cloudKeyName, cloudKeyValue, projectKeyName)
-}
-
-func (c *apiClient) CreateProject(ctx context.Context, project *crmv1.Project, labels []contracts.Label) (err error) {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "ApiClient::CreateProject")
-	defer span.Finish()
-
-	entity := &contracts.CatalogEntity{
-		ParentKey:   cloudKeyName,
-		ParentValue: cloudKeyValue,
-		Key:         projectKeyName,
-		Value:       project.ProjectId,
-	}
-
-	return c.CreateCatalogEntity(ctx, entity)
-}
-
-func (c *apiClient) UpdateProject(ctx context.Context, currentProject *contracts.CatalogEntity, desiredProject *crmv1.Project, labels []contracts.Label) (err error) {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "ApiClient::UpdateProject")
-	defer span.Finish()
-
-	// ensure currentProject is of the right type
-	if currentProject.Key != projectKeyName {
-		return fmt.Errorf("Entity is not a valid project entity, but of type %v", currentProject.Key)
-	}
-
-	return c.UpdateCatalogEntity(ctx, currentProject)
-}
-
-func (c *apiClient) DeleteProject(ctx context.Context, currentProject *contracts.CatalogEntity) (err error) {
-	span, ctx := opentracing.StartSpanFromContext(ctx, "ApiClient::DeleteProject")
-	defer span.Finish()
-
-	// ensure currentProject is of the right type
-	if currentProject.Key != projectKeyName {
-		return fmt.Errorf("Entity is not a valid project entity, but of type %v", currentProject.Key)
-	}
-
-	return c.DeleteCatalogEntity(ctx, currentProject)
 }
 
 func (c *apiClient) getRequest(uri string, span opentracing.Span, requestBody io.Reader, headers map[string]string, allowedStatusCodes ...int) (responseBody []byte, err error) {
