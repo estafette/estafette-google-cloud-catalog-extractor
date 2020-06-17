@@ -77,7 +77,7 @@ releases:
       deploy:
         image: extensions/gke:dev
         kind: cronjob
-        schedule: '*/5 * * * *'
+        schedule: '*/30 * * * *'
         concurrencypolicy: Forbid
         namespace: estafette-ci
         container:
