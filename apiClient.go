@@ -136,6 +136,10 @@ func (c *apiClient) getCatalogEntitiesPage(ctx context.Context, parentKey, paren
 	}
 
 	responseBody, err := c.getRequest(getCatalogEntitiesURL, span, nil, headers)
+	if err != nil {
+		log.Error().Err(err).Str("url", getCatalogEntitiesURL).Msgf("Failed retrieving get catalog entities response")
+		return
+	}
 
 	var listResponse struct {
 		Items      []*contracts.CatalogEntity `json:"items"`
@@ -177,6 +181,9 @@ func (c *apiClient) CreateCatalogEntity(ctx context.Context, entity *contracts.C
 	}
 
 	_, err = c.postRequest(createCatalogEntityURL, span, strings.NewReader(string(bytes)), headers, http.StatusCreated)
+	if err != nil {
+		return
+	}
 
 	return
 }
@@ -202,6 +209,9 @@ func (c *apiClient) UpdateCatalogEntity(ctx context.Context, entity *contracts.C
 	}
 
 	_, err = c.putRequest(updateCatalogEntityURL, span, strings.NewReader(string(bytes)), headers)
+	if err != nil {
+		return
+	}
 
 	return
 }
@@ -225,6 +235,9 @@ func (c *apiClient) DeleteCatalogEntity(ctx context.Context, entity *contracts.C
 	}
 
 	_, err = c.deleteRequest(deleteCatalogEntityURL, span, strings.NewReader(string(bytes)), headers)
+	if err != nil {
+		return
+	}
 
 	return
 }
