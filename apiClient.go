@@ -118,7 +118,7 @@ func (c *apiClient) getCatalogEntitiesPage(ctx context.Context, parentKey, paren
 	if parentKey != "" {
 		parentFilter = parentKey
 		if parentValue != "" {
-			parentFilter = "=" + parentValue
+			parentFilter += "=" + parentValue
 		}
 
 		parentFilter = "&filter[parent]=" + url.QueryEscape(parentFilter)
