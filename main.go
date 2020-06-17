@@ -36,6 +36,7 @@ const (
 	cloudKeyName        = "cloud"
 	projectKeyName      = "project"
 	gkeClusterKeyName   = "gke-cluster"
+	pubsubTopicKeyName  = "pubsub-topic"
 )
 
 const cloudKeyValue = "Google Cloud"

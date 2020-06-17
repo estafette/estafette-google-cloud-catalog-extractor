@@ -89,7 +89,9 @@ func (e *extractor) runClouds(ctx context.Context, parentEntity *contracts.Catal
 	}
 
 	// fetch projects for each cloud
-	err = e.loopEntitiesInParallel(ctx, desiredClouds, func(ctx context.Context, entity *contracts.CatalogEntity) error { return e.runProjects(ctx, entity) })
+	err = e.loopEntitiesInParallel(ctx, desiredClouds, func(ctx context.Context, entity *contracts.CatalogEntity) error {
+		return e.runProjects(ctx, entity)
+	})
 	if err != nil {
 		return err
 	}
@@ -119,7 +121,17 @@ func (e *extractor) runProjects(ctx context.Context, parentEntity *contracts.Cat
 	}
 
 	// fetch gke clusters for each project
-	err = e.loopEntitiesInParallel(ctx, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) error { return e.runGKEClusters(ctx, entity) })
+	err = e.loopEntitiesInParallel(ctx, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) error {
+		return e.runGKEClusters(ctx, entity)
+	})
+	if err != nil {
+		return err
+	}
+
+	// fetch pubsub topics for each project
+	err = e.loopEntitiesInParallel(ctx, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) error {
+		return e.runPubSubTopics(ctx, entity)
+	})
 	if err != nil {
 		return err
 	}
@@ -144,6 +156,30 @@ func (e *extractor) runGKEClusters(ctx context.Context, parentEntity *contracts.
 	}
 
 	err = e.syncEntities(ctx, currentGKEClusters, desiredGKEClusters, true)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (e *extractor) runPubSubTopics(ctx context.Context, parentEntity *contracts.CatalogEntity) (err error) {
+
+	if parentEntity.Key != projectKeyName {
+		return fmt.Errorf("Parent key is invalid; %v instead of %v", parentEntity.Key, projectKeyName)
+	}
+
+	currentTopics, err := e.apiClient.GetCatalogEntities(ctx, parentEntity.Key, parentEntity.Value, pubsubTopicKeyName)
+	if err != nil {
+		return err
+	}
+
+	desiredTopics, err := e.googleCloudClient.GetPubSubTopics(ctx, parentEntity)
+	if err != nil {
+		return err
+	}
+
+	err = e.syncEntities(ctx, currentTopics, desiredTopics, true)
 	if err != nil {
 		return err
 	}

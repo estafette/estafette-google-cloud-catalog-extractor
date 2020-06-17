@@ -8,11 +8,13 @@ import (
 	crmv1 "google.golang.org/api/cloudresourcemanager/v1"
 	containerv1 "google.golang.org/api/container/v1"
 	iam "google.golang.org/api/iam/v1"
+	pubsubv1 "google.golang.org/api/pubsub/v1"
 )
 
 type GoogleCloudClient interface {
 	GetProjects(ctx context.Context, parentEntity *contracts.CatalogEntity) (projects []*contracts.CatalogEntity, err error)
 	GetGKEClusters(ctx context.Context, parentEntity *contracts.CatalogEntity) (clusters []*contracts.CatalogEntity, err error)
+	GetPubSubTopics(ctx context.Context, parentEntity *contracts.CatalogEntity) (topics []*contracts.CatalogEntity, err error)
 }
 
 // NewGoogleCloudClient returns a new GoogleCloudClient
@@ -34,15 +36,22 @@ func NewGoogleCloudClient(ctx context.Context) (GoogleCloudClient, error) {
 		return nil, err
 	}
 
+	pubsubv1Service, err := pubsubv1.New(googleClient)
+	if err != nil {
+		return nil, err
+	}
+
 	return &googleCloudClient{
 		crmv1Service:       crmv1Service,
 		containerv1Service: containerv1Service,
+		pubsubv1Service:    pubsubv1Service,
 	}, nil
 }
 
 type googleCloudClient struct {
 	crmv1Service       *crmv1.Service
 	containerv1Service *containerv1.Service
+	pubsubv1Service    *pubsubv1.Service
 }
 
 func (c *googleCloudClient) GetProjects(ctx context.Context, parentEntity *contracts.CatalogEntity) (projects []*contracts.CatalogEntity, err error) {
@@ -108,6 +117,35 @@ func (c *googleCloudClient) GetGKEClusters(ctx context.Context, parentEntity *co
 			ParentValue: parentEntity.Value,
 			Key:         gkeClusterKeyName,
 			Value:       cluster.Zone + "/" + cluster.Name,
+			Labels:      parentEntity.Labels,
+		})
+	}
+
+	return
+}
+
+func (c *googleCloudClient) GetPubSubTopics(ctx context.Context, parentEntity *contracts.CatalogEntity) (topics []*contracts.CatalogEntity, err error) {
+
+	// https://cloud.google.com/pubsub/docs/reference/rest/v1/projects.topics/list
+
+	googlePubsubTopics := make([]*pubsubv1.Topic, 0)
+
+	listCall := c.pubsubv1Service.Projects.Topics.List(parentEntity.Value)
+
+	resp, err := listCall.Do()
+	if err != nil {
+		return topics, err
+	}
+
+	googlePubsubTopics = append(googlePubsubTopics, resp.Topics...)
+
+	topics = make([]*contracts.CatalogEntity, 0)
+	for _, topic := range googlePubsubTopics {
+		topics = append(topics, &contracts.CatalogEntity{
+			ParentKey:   parentEntity.Key,
+			ParentValue: parentEntity.Value,
+			Key:         pubsubTopicKeyName,
+			Value:       topic.Name,
 			Labels:      parentEntity.Labels,
 		})
 	}
