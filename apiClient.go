@@ -323,7 +323,7 @@ func (c *apiClient) makeRequest(method, uri string, span opentracing.Span, reque
 	}
 
 	if !foundation.IntArrayContains(allowedStatusCodes, response.StatusCode) {
-		return nil, fmt.Errorf("%v responded with status code %v", uri, response.StatusCode)
+		return nil, fmt.Errorf("%v %v responded with status code %v", method, uri, response.StatusCode)
 	}
 
 	body, err := ioutil.ReadAll(response.Body)
