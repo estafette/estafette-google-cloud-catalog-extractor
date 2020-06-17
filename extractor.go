@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	contracts "github.com/estafette/estafette-ci-contracts"
 )
@@ -194,6 +195,7 @@ func (e *extractor) syncEntities(ctx context.Context, currentEntities []*contrac
 		for _, cd := range currentEntities {
 			if cd.Value == de.Value {
 				isCurrent = true
+				break
 			}
 		}
 		if !isCurrent {
@@ -210,12 +212,19 @@ func (e *extractor) syncEntities(ctx context.Context, currentEntities []*contrac
 		for _, de := range desiredEntities {
 			if cd.Value == de.Value {
 				isDesired = true
+
+				if e.entitiesAreEqual(cd, de) {
+					break
+				}
+
 				// update
 				de.ID = cd.ID
 				err = e.apiClient.UpdateCatalogEntity(ctx, de)
 				if err != nil {
 					return
 				}
+
+				break
 			}
 		}
 		if !isDesired && deleteIfNotDesired {
@@ -260,4 +269,31 @@ func (e *extractor) loopEntitiesInParallel(ctx context.Context, concurrency int,
 	}
 
 	return nil
+}
+
+func (e *extractor) entitiesAreEqual(currentEntity *contracts.CatalogEntity, desiredEntity *contracts.CatalogEntity) bool {
+
+	// id, parent key, parent value, key and value are immutable so no need to check those
+
+	// compare LinkedPipeline
+	if currentEntity.LinkedPipeline != desiredEntity.LinkedPipeline {
+		return false
+	}
+
+	// compare Labels
+	if len(currentEntity.Labels) != len(desiredEntity.Labels) {
+		return false
+	}
+	for i, v := range currentEntity.Labels {
+		if v != desiredEntity.Labels[i] {
+			return false
+		}
+	}
+
+	if !reflect.DeepEqual(currentEntity.Metadata, desiredEntity.Metadata) {
+		return false
+
+	}
+
+	return true
 }
