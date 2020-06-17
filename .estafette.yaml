@@ -1,0 +1,95 @@
+builder:
+  track: dev
+
+labels:
+  app-group: estafette-ci
+  team: estafette-team
+  language: golang
+
+version:
+  semver:
+    major: 0
+    minor: 0
+
+stages:
+  build:
+    image: golang:1.14.4-alpine3.12
+    env:
+      CGO_ENABLED: 0
+      GOOS: linux
+      API_BASE_URL: estafette.secret(AJwsqWlJSLjiUOPz.FTuJpmMFZLqJZOO7D56F0VhyeDDPH6YvdBdnO0ZSRx1iHawXycCSMfruacdwI4Txxq9wjHyGkxTK8td8.GiaJvmVdZfaDeri_Go-Qw1goeDqPFrw1cl9rIUZSGBBqXOUQzsiQPa-zecZQqD5Lr6iDZhVWZ6a09v79L2Ro40rn_-Qn)
+      CLIENT_ID: estafette.secret(HMxwhjF7i2ZX5bDy.fPTrGeOKCs2Nigu4OhxIuBfNOXQdRiQ8cDJ6UsHQu03BDTgSPeReFZrczkL2BDeh_GLGnA==.KP-sRaffQs_PhhDofUUd6keMYCgARTRldGx5EtaAp0ucQm9Wa6l_qokp6POH0LRTEcIhVC0vOIInnZS6y0U9CvQrVeqq)
+      CLIENT_SECRET: estafette.secret(cPTXmCkF995gknjX.bFsXQTs_WAJ-5s_Ve8zVNvQDMFYrOeU7gPm0xvn1Z8sZlwkTL3w96KWgmyAqIOlObS2_KUK8vLuMUqpfeek2SGs-Ujjh6cid43fZMBmc5nA=.ZmM0WyMaMyZwwKuHXvOCCfobJ2FmatMgmKmH0cCpAPsD9TwWH1N8zv62sSMvHNEWOwCzO0Z35S2WOjJ79MQt-Evr-TAb)
+    commands:
+    - go test ./...
+    - go build -a -installsuffix cgo -ldflags "-X main.appgroup=${ESTAFETTE_LABEL_APP_GROUP} -X main.app=${ESTAFETTE_GIT_NAME} -X main.version=${ESTAFETTE_BUILD_VERSION} -X main.revision=${ESTAFETTE_GIT_REVISION} -X main.branch=${ESTAFETTE_GIT_BRANCH} -X main.buildDate=${ESTAFETTE_BUILD_DATETIME}" -o ./publish/${ESTAFETTE_GIT_NAME} .
+
+  bake:
+    image: extensions/docker:dev
+    action: build
+    inline: |
+      FROM scratch
+
+      LABEL maintainer="estafette.io" \
+            description="${ESTAFETTE_GIT_NAME} is an application to extract information from Google Cloud and store it in Estafette's catalog"
+
+      COPY ca-certificates.crt /etc/ssl/certs/
+      COPY ${ESTAFETTE_GIT_NAME} /
+
+      ENTRYPOINT ["/${ESTAFETTE_GIT_NAME}"]
+    repositories:
+    - estafette
+    path: ./publish
+    copy:
+    - /etc/ssl/certs/ca-certificates.crt
+
+  check-container:
+    parallelStages:
+      check-efficiency:
+        image: extensions/docker:dev
+        action: dive
+        repositories:
+        - estafette
+
+      vulnerability-scan:
+        image: extensions/docker:dev
+        action: trivy
+        repositories:
+        - estafette
+
+  push-to-docker-hub:
+    image: extensions/docker:dev
+    action: push
+    repositories:
+    - estafette
+
+  slack-notify:
+    image: extensions/slack-build-status:dev
+    workspace: estafette
+    channels:
+    - '#build-status'
+    when:
+      status == 'failed'
+
+releases:
+  tooling-estafette:
+    stages:
+      deploy:
+        image: extensions/gke:dev
+        kind: cronjob
+        schedule: '*/5 * * * *'
+        concurrencypolicy: Forbid
+        namespace: estafette-ci
+        container:
+          repository: estafette
+          env:
+            API_BASE_URL: estafette.secret(AJwsqWlJSLjiUOPz.FTuJpmMFZLqJZOO7D56F0VhyeDDPH6YvdBdnO0ZSRx1iHawXycCSMfruacdwI4Txxq9wjHyGkxTK8td8.GiaJvmVdZfaDeri_Go-Qw1goeDqPFrw1cl9rIUZSGBBqXOUQzsiQPa-zecZQqD5Lr6iDZhVWZ6a09v79L2Ro40rn_-Qn)
+            CLIENT_ID: estafette.secret(HMxwhjF7i2ZX5bDy.fPTrGeOKCs2Nigu4OhxIuBfNOXQdRiQ8cDJ6UsHQu03BDTgSPeReFZrczkL2BDeh_GLGnA==.KP-sRaffQs_PhhDofUUd6keMYCgARTRldGx5EtaAp0ucQm9Wa6l_qokp6POH0LRTEcIhVC0vOIInnZS6y0U9CvQrVeqq)
+            CLIENT_SECRET: estafette.secret(cPTXmCkF995gknjX.bFsXQTs_WAJ-5s_Ve8zVNvQDMFYrOeU7gPm0xvn1Z8sZlwkTL3w96KWgmyAqIOlObS2_KUK8vLuMUqpfeek2SGs-Ujjh6cid43fZMBmc5nA=.ZmM0WyMaMyZwwKuHXvOCCfobJ2FmatMgmKmH0cCpAPsD9TwWH1N8zv62sSMvHNEWOwCzO0Z35S2WOjJ79MQt-Evr-TAb)
+            GSUITE_DOMAIN: estafette.secret(XotirMm3TR2LjCbe.4aIemR8pjhIpYntoS9ZCvDcm5xSOa4HFwl0=.8rkLhwMzjhIpYmM7deNcfhdt0N2iRqtQ_iyet6t5MuwDmx14a9SKFYafzp8w_zVvO78V_SHO4pV2nsRwqlKNBWSlv9jg)
+            GSUITE_ADMIN_EMAIL: estafette.secret(C1OAyoKYG-PGW3Mv.ZzP4AtffPcv-RIfggtgR8sDA15Rl9zcy1lEyUwxw1b_llQ==.cznkA8PTdOjlW8nzmNRe98rZQxNnezg-08bo0E3VSUFhfODlqhJ_X5OsW8q6gpS07he5tsDj_0LLa3zWOigyayO8PR0L)
+            GSUITE_GROUP_PREFIX: estafette.secret(6B-EWkYsDgF5Ag6J.aEXP5bTkBKRovOq7uMofXHVxoBKgOxY=.aE_LoKb1B-aN9jR1szAAZcyQW1pWPrpZdhwEz5bOGusu8Yz0CSdtNrIYS1dwzf-aO8uoNhHOWjWnK_1I_oSZshj6YAuk)
+            JAEGER_SAMPLER_TYPE: probabilistic
+            JAEGER_SAMPLER_PARAM: 0.5
+            ESTAFETTE_LOG_FORMAT: v3
+        useGoogleCloudCredentials: true
