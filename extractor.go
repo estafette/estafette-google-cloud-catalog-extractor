@@ -142,6 +142,7 @@ func (e *extractor) syncEntities(ctx context.Context, currentEntities []*contrac
 			if cd.Value == de.Value {
 				isDesired = true
 				// update
+				de.ID = cd.ID
 				err = e.apiClient.UpdateCatalogEntity(ctx, de)
 				if err != nil {
 					return

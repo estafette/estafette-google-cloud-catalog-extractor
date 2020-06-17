@@ -18,8 +18,8 @@ stages:
       CGO_ENABLED: 0
       GOOS: linux
       API_BASE_URL: estafette.secret(4iRZVpE70u5lhFc0.M4JH0pqJlPtyQzd63jWDEn5gJ1hUiT7f3cMU6Bi6Au-SwbCL_2TORHasZ9xReTBilnhLOd5PeeW959Dm.PJ9HypzRlbd4XWx-yySWAH46J1IUgCTF24sY8hi6XeacwvmT6CjbQWH3ap5W5kdc4LHrt22ra3r2Ax1aMNHpRXajJij0xcWW1cLyYPw=)
-      CLIENT_ID: estafette.secret(vJ4gEC5xug7SOxS_.3mN8kv_53phEUB3oeKZ0MiF9T-QItXZx1LVyVuPiu7E6wKmkQ-fKTOlb_6XvwVC_2klyyg==.izhszL2tlJoGBQa0bf8hNyVrFuMe52Yog-d0Q6K-r-42m_auyG4QrBqgRRTfwZaX1qBSyEFiDFdPg2DCjpsnWQ-mB3Oog_aJfhuNmFM=)
-      CLIENT_SECRET: estafette.secret(A8ranTb503epCcpI.YZjNch9syAo9OT641cjVohKkOa_0v4YVASl_7NVSzKJmb-AfYNziPlQD2KPb0uL_x_4jrDcAt8rzXNDaZCcu0zarFbjRd8UqK2vP1-v40ws=.XKSIVxh9iTg9Bn_v0ovfpznoGpm8kqNXIwNw4eNHhY1eZvREX5zYJAIh_9_byfPX4cc24mcfkdvCBufTJxSfH2TzWV0TChcPljCQhhw=)
+      CLIENT_ID: estafette.secret(_ltek97NUaWi1Ov9.I6m91RD0Cmyms0c8-0qevf_qmgVHu6HFLTJDSa8p0kZpIvEbH_U3xwB8YCrpPi5vbFcdcg==.dvKti1KgQG7k5lxg7hPLuPv8wwJR6bGcemBFXO51xhllea4RKG_3KEQTDzy2otPSGQRCL4x8XIHPJn2PYxCJso6ZBUbFOnBK3VyMJj8=)
+      CLIENT_SECRET: estafette.secret(ufHOFmxko0iJ41df.3M9XoGb5IYv7G5ZrFUGkS9Z8g4HqThdUr0T3yyXXzFUZzT_tyPaS4qMeIsnj2Gb2spTQ3mgfptQCbMMBeLn2XYjfvlkwx2vDIBKxF32jyMQ=.4fMShWHoYLn7JNc8EgKuTv0woLeiYzIWjW74xhPChXohxCu297ao-PU8BbXjw3felK3FkDgAgMUzNvQIO_gHFdnWVrH4nFWsx7a9b7A=)
     commands:
     - go test ./...
     - go build -a -installsuffix cgo -ldflags "-X main.appgroup=${ESTAFETTE_LABEL_APP_GROUP} -X main.app=${ESTAFETTE_GIT_NAME} -X main.version=${ESTAFETTE_BUILD_VERSION} -X main.revision=${ESTAFETTE_GIT_REVISION} -X main.branch=${ESTAFETTE_GIT_BRANCH} -X main.buildDate=${ESTAFETTE_BUILD_DATETIME}" -o ./publish/${ESTAFETTE_GIT_NAME} .
@@ -84,9 +84,9 @@ releases:
           repository: estafette
           env:
             API_BASE_URL: estafette.secret(4iRZVpE70u5lhFc0.M4JH0pqJlPtyQzd63jWDEn5gJ1hUiT7f3cMU6Bi6Au-SwbCL_2TORHasZ9xReTBilnhLOd5PeeW959Dm.PJ9HypzRlbd4XWx-yySWAH46J1IUgCTF24sY8hi6XeacwvmT6CjbQWH3ap5W5kdc4LHrt22ra3r2Ax1aMNHpRXajJij0xcWW1cLyYPw=)
-            CLIENT_ID: estafette.secret(vJ4gEC5xug7SOxS_.3mN8kv_53phEUB3oeKZ0MiF9T-QItXZx1LVyVuPiu7E6wKmkQ-fKTOlb_6XvwVC_2klyyg==.izhszL2tlJoGBQa0bf8hNyVrFuMe52Yog-d0Q6K-r-42m_auyG4QrBqgRRTfwZaX1qBSyEFiDFdPg2DCjpsnWQ-mB3Oog_aJfhuNmFM=)
-            CLIENT_SECRET: estafette.secret(A8ranTb503epCcpI.YZjNch9syAo9OT641cjVohKkOa_0v4YVASl_7NVSzKJmb-AfYNziPlQD2KPb0uL_x_4jrDcAt8rzXNDaZCcu0zarFbjRd8UqK2vP1-v40ws=.XKSIVxh9iTg9Bn_v0ovfpznoGpm8kqNXIwNw4eNHhY1eZvREX5zYJAIh_9_byfPX4cc24mcfkdvCBufTJxSfH2TzWV0TChcPljCQhhw=)
-            ORGANIZATION: estafette.secret(73onNgXmWuLzOjG5.amGEk80G-FnvPfipP-dgrEhQCx4idw==.WXqRjdEcqACcDy0O6FKpVan9NFQgmHbm9BKQgdjieLp1mh7AV_xB86pfUnQb7h7IL8BS03W4yF66gF--rBzbH6Zn9WsKnK7gkqrDwlc=)
+            CLIENT_ID: estafette.secret(_ltek97NUaWi1Ov9.I6m91RD0Cmyms0c8-0qevf_qmgVHu6HFLTJDSa8p0kZpIvEbH_U3xwB8YCrpPi5vbFcdcg==.dvKti1KgQG7k5lxg7hPLuPv8wwJR6bGcemBFXO51xhllea4RKG_3KEQTDzy2otPSGQRCL4x8XIHPJn2PYxCJso6ZBUbFOnBK3VyMJj8=)
+            CLIENT_SECRET: estafette.secret(ufHOFmxko0iJ41df.3M9XoGb5IYv7G5ZrFUGkS9Z8g4HqThdUr0T3yyXXzFUZzT_tyPaS4qMeIsnj2Gb2spTQ3mgfptQCbMMBeLn2XYjfvlkwx2vDIBKxF32jyMQ=.4fMShWHoYLn7JNc8EgKuTv0woLeiYzIWjW74xhPChXohxCu297ao-PU8BbXjw3felK3FkDgAgMUzNvQIO_gHFdnWVrH4nFWsx7a9b7A=)
+            ORGANIZATION: estafette.secret(kl4_znh9HMeqykGz.9WnQtdfd3p4aqFwCvMEES2e5GVfxFQ==.xnLFq8vHB3AWUiMJ9ZdKX0aFwiWkWNCN2J-VIW59v7o-ggtiWdZ1q6VXt7MMGEjeHJEQwgF4Jrx3FZey0Z--HWOXD48gko9UxeQ3dUw=)
             JAEGER_SAMPLER_TYPE: probabilistic
             JAEGER_SAMPLER_PARAM: 0.5
             ESTAFETTE_LOG_FORMAT: v3

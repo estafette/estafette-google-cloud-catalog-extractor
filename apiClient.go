@@ -47,6 +47,8 @@ func (c *apiClient) GetToken(ctx context.Context) (token string, err error) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "ApiClient::GetToken")
 	defer span.Finish()
 
+	log.Debug().Msgf("Retrieving JWT token")
+
 	clientObject := contracts.Client{
 		ClientID:     c.clientID,
 		ClientSecret: c.clientSecret,
@@ -84,6 +86,8 @@ func (c *apiClient) GetToken(ctx context.Context) (token string, err error) {
 func (c *apiClient) GetCatalogEntities(ctx context.Context, parentKey, parentValue, entityKey string) (entities []*contracts.CatalogEntity, err error) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "ApiClient::GetCatalogEntities")
 	defer span.Finish()
+
+	log.Debug().Msgf("Retrieving catalog entities of type %v with parent %v=%v", entityKey, parentKey, parentValue)
 
 	pageNumber := 1
 	pageSize := 100
@@ -164,6 +168,8 @@ func (c *apiClient) CreateCatalogEntity(ctx context.Context, entity *contracts.C
 	span, ctx := opentracing.StartSpanFromContext(ctx, "ApiClient::CreateCatalogEntity")
 	defer span.Finish()
 
+	log.Debug().Msgf("Creating catalog entity %v=%v with parent %v=%v", entity.Key, entity.Value, entity.ParentKey, entity.ParentValue)
+
 	span.LogKV("parent", fmt.Sprintf("%v=%v", entity.ParentKey, entity.ParentValue))
 	span.LogKV("entity", fmt.Sprintf("%v=%v", entity.Key, entity.Value))
 
@@ -192,6 +198,8 @@ func (c *apiClient) UpdateCatalogEntity(ctx context.Context, entity *contracts.C
 	span, ctx := opentracing.StartSpanFromContext(ctx, "ApiClient::UpdateCatalogEntity")
 	defer span.Finish()
 
+	log.Debug().Msgf("Updating catalog entity %v=%v with parent %v=%v and id=%v", entity.Key, entity.Value, entity.ParentKey, entity.ParentValue, entity.ID)
+
 	span.LogKV("parent", fmt.Sprintf("%v=%v", entity.ParentKey, entity.ParentValue))
 	span.LogKV("entity", fmt.Sprintf("%v=%v", entity.Key, entity.Value))
 
@@ -219,6 +227,8 @@ func (c *apiClient) UpdateCatalogEntity(ctx context.Context, entity *contracts.C
 func (c *apiClient) DeleteCatalogEntity(ctx context.Context, entity *contracts.CatalogEntity) (err error) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "ApiClient::DeleteCatalogEntity")
 	defer span.Finish()
+
+	log.Debug().Msgf("Deleting catalog entity %v=%v with parent %v=%v and id=%v", entity.Key, entity.Value, entity.ParentKey, entity.ParentValue, entity.ID)
 
 	span.LogKV("parent", fmt.Sprintf("%v=%v", entity.ParentKey, entity.ParentValue))
 	span.LogKV("entity", fmt.Sprintf("%v=%v", entity.Key, entity.Value))
