@@ -32,17 +32,21 @@ var (
 )
 
 const (
-	organizationKeyName  = "organization"
-	cloudKeyName         = "cloud"
-	projectKeyName       = "project"
-	gkeClusterKeyName    = "gke-cluster"
-	pubsubTopicKeyName   = "pubsub-topic"
-	cloudfunctionKeyName = "cloud-function"
-	storageBucketKeyName = "storage-bucket"
-	dataflowJobKeyName   = "dataflow-job"
+	organizationKeyName    = "organization"
+	cloudKeyName           = "cloud"
+	projectKeyName         = "project"
+	gkeClusterKeyName      = "gke-cluster"
+	pubsubTopicKeyName     = "pubsub-topic"
+	cloudfunctionKeyName   = "cloud-function"
+	storageBucketKeyName   = "storage-bucket"
+	dataflowJobKeyName     = "dataflow-job"
+	bigqueryDatasetKeyName = "bigquery-dataset"
+	bigqueryTableKeyName   = "bigquery-table"
 )
 
 const cloudKeyValue = "Google Cloud"
+
+const locationLabelKey = "location"
 
 func main() {
 

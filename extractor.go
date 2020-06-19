@@ -166,6 +166,14 @@ func (e *extractor) runProjects(ctx context.Context, parentEntity *contracts.Cat
 		return err
 	}
 
+	// fetch bigquery datasets for each project
+	err = e.loopEntitiesInParallel(ctx, 5, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) error {
+		return e.runFunction(ctx, projectKeyName, bigqueryDatasetKeyName, entity, e.googleCloudClient.GetBigqueryDatasets, true)
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
