@@ -15,6 +15,7 @@ import (
 	crmv1 "google.golang.org/api/cloudresourcemanager/v1"
 	containerv1 "google.golang.org/api/container/v1"
 	dataflowv1b3 "google.golang.org/api/dataflow/v1b3"
+	datastorev1 "google.golang.org/api/datastore/v1"
 	"google.golang.org/api/googleapi"
 	iam "google.golang.org/api/iam/v1"
 	pubsubv1 "google.golang.org/api/pubsub/v1"
@@ -31,6 +32,9 @@ var (
 
 	// ErrProjectNotFound is returned when an api throws 'googleapi: Error 404: The requested project was not found., notFound'
 	ErrProjectNotFound = errors.New("The project is not found")
+
+	// ErrEntityNotFound is returned when pubsub topics return htlm with a 404
+	ErrEntityNotFound = errors.New("Entity is not found")
 )
 
 type GoogleCloudClient interface {
@@ -93,6 +97,11 @@ func NewGoogleCloudClient(ctx context.Context) (GoogleCloudClient, error) {
 		return nil, err
 	}
 
+	datastorev1Service, err := datastorev1.New(googleClient)
+	if err != nil {
+		return nil, err
+	}
+
 	return &googleCloudClient{
 		crmv1Service:            crmv1Service,
 		containerv1Service:      containerv1Service,
@@ -102,6 +111,7 @@ func NewGoogleCloudClient(ctx context.Context) (GoogleCloudClient, error) {
 		storagev1Service:        storagev1Service,
 		bigqueryv2Service:       bigqueryv2Service,
 		sqlv1beta4Service:       sqlv1beta4Service,
+		datastorev1Service:      datastorev1Service,
 	}, nil
 }
 
@@ -114,6 +124,7 @@ type googleCloudClient struct {
 	storagev1Service        *storagev1.Service
 	bigqueryv2Service       *bigqueryv2.Service
 	sqlv1beta4Service       *sqlv1beta4.Service
+	datastorev1Service      *datastorev1.Service
 }
 
 func (c *googleCloudClient) GetProjects(ctx context.Context, parentEntity *contracts.CatalogEntity) (projects []*contracts.CatalogEntity, err error) {
@@ -485,6 +496,9 @@ func (c *googleCloudClient) substituteErrorsToIgnore(entities []*contracts.Catal
 	}
 	if googleapiErr, ok := err.(*googleapi.Error); ok && googleapiErr.Code == http.StatusNotFound && err.Error() == "googleapi: Error 404: The requested project was not found., notFound" {
 		return entities, ErrProjectNotFound
+	}
+	if googleapiErr, ok := err.(*googleapi.Error); ok && googleapiErr.Code == http.StatusNotFound {
+		return entities, ErrEntityNotFound
 	}
 
 	return entities, err

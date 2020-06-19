@@ -245,7 +245,7 @@ func (e *extractor) runFunction(ctx context.Context, acceptedParentKeyName, curr
 
 	desiredEntities, err := desiredEntitiesFunc(ctx, parentEntity)
 	if err != nil {
-		if errors.Is(err, ErrAPINotEnabled) || errors.Is(err, ErrUnknownProjectID) || errors.Is(err, ErrProjectNotFound) {
+		if errors.Is(err, ErrAPINotEnabled) || errors.Is(err, ErrUnknownProjectID) || errors.Is(err, ErrProjectNotFound) || errors.Is(err, ErrEntityNotFound) {
 			// ignoring some api errors that seem to be thrown for various reasons
 			log.Warn().Err(err).Msgf("Failed retrieving desired entities of type %v, but ignoring error", currentEntityKeyName)
 			return nil
