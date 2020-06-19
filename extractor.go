@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	contracts "github.com/estafette/estafette-ci-contracts"
+	"github.com/rs/zerolog/log"
 )
 
 type Extractor interface {
@@ -214,6 +215,7 @@ func (e *extractor) syncEntities(ctx context.Context, currentEntities []*contrac
 				isDesired = true
 
 				if e.entitiesAreEqual(cd, de) {
+					log.Debug().Msg("Current and desired entity are equal, skipping updated")
 					break
 				}
 
