@@ -81,7 +81,10 @@ func (e *extractor) runClouds(ctx context.Context, parentEntity *contracts.Catal
 			ParentValue: parentEntity.Value,
 			Key:         cloudKeyName,
 			Value:       cloudKeyValue,
-			Labels:      parentEntity.Labels,
+			Labels: append(parentEntity.Labels, contracts.Label{
+				Key:   cloudKeyName,
+				Value: cloudKeyValue,
+			}),
 		},
 	}
 
