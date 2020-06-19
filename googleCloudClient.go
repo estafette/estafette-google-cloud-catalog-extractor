@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	contracts "github.com/estafette/estafette-ci-contracts"
 	"golang.org/x/oauth2/google"
@@ -246,18 +247,20 @@ func (c *googleCloudClient) GetCloudFunctions(ctx context.Context, parentEntity 
 		nextPageToken = resp.NextPageToken
 	}
 
-	// cloud-function = projects/travix-staging/locations/us-central1/functions/sendReleaseToBigQuery
-
 	cloudfunctions = make([]*contracts.CatalogEntity, 0)
 	for _, cloudfunction := range googleCloudFunctions {
+
+		name := strings.TrimPrefix(cloudfunction.Name, fmt.Sprintf("projects/%v/locations/", parentEntity.Value))
+		name = strings.Replace(name, "/functions/", "/", 1)
+
 		cloudfunctions = append(cloudfunctions, &contracts.CatalogEntity{
 			ParentKey:   parentEntity.Key,
 			ParentValue: parentEntity.Value,
 			Key:         cloudfunctionKeyName,
-			Value:       cloudfunction.Name,
+			Value:       name,
 			Labels: append(parentEntity.Labels, contracts.Label{
 				Key:   cloudfunctionKeyName,
-				Value: cloudfunction.Name,
+				Value: name,
 			}),
 		})
 	}
