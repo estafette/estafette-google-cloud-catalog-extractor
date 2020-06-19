@@ -7,6 +7,7 @@ import (
 	"reflect"
 
 	contracts "github.com/estafette/estafette-ci-contracts"
+	"github.com/rs/zerolog/log"
 )
 
 type Extractor interface {
@@ -232,6 +233,8 @@ func (e *extractor) runFunction(ctx context.Context, acceptedParentKeyName, curr
 			// ignoring api is not enabled errors and continueing, since if the api is disabled the parent will not have resources of that type anyway
 			return nil
 		}
+
+		log.Warn().Err(err).Msgf("Failed retrieving desired entities of type %v", currentEntityKeyName)
 
 		return err
 	}
