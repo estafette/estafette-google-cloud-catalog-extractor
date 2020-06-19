@@ -120,6 +120,10 @@ func (c *googleCloudClient) GetProjects(ctx context.Context, parentEntity *contr
 
 	projects = make([]*contracts.CatalogEntity, 0)
 	for _, p := range googleProjects {
+		if p.ProjectId == "" || p.ProjectId == "0" {
+			continue
+		}
+
 		projects = append(projects, &contracts.CatalogEntity{
 			ParentKey:   parentEntity.Key,
 			ParentValue: parentEntity.Value,
