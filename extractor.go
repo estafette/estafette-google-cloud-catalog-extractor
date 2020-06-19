@@ -276,6 +276,7 @@ func (e *extractor) loopEntitiesInParallel(ctx context.Context, concurrency int,
 func (e *extractor) entitiesAreEqual(currentEntity *contracts.CatalogEntity, desiredEntity *contracts.CatalogEntity) bool {
 
 	// id, parent key, parent value, key and value are immutable so no need to check those
+	log.Debug().Interface("currentEntity", *currentEntity).Interface("desiredEntity", *desiredEntity).Msg("Comparing equality of entities")
 
 	// compare LinkedPipeline
 	if currentEntity.LinkedPipeline != desiredEntity.LinkedPipeline {
@@ -292,9 +293,9 @@ func (e *extractor) entitiesAreEqual(currentEntity *contracts.CatalogEntity, des
 		}
 	}
 
+	// compare Metadata
 	if !reflect.DeepEqual(currentEntity.Metadata, desiredEntity.Metadata) {
 		return false
-
 	}
 
 	return true
