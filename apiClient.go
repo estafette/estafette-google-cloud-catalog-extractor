@@ -173,8 +173,6 @@ func (c *apiClient) CreateCatalogEntity(ctx context.Context, entity *contracts.C
 	span.LogKV("parent", fmt.Sprintf("%v=%v", entity.ParentKey, entity.ParentValue))
 	span.LogKV("entity", fmt.Sprintf("%v=%v", entity.Key, entity.Value))
 
-	c.AddLabelIfMissing(ctx, entity)
-
 	bytes, err := json.Marshal(entity)
 	if err != nil {
 		return
@@ -202,8 +200,6 @@ func (c *apiClient) UpdateCatalogEntity(ctx context.Context, entity *contracts.C
 
 	span.LogKV("parent", fmt.Sprintf("%v=%v", entity.ParentKey, entity.ParentValue))
 	span.LogKV("entity", fmt.Sprintf("%v=%v", entity.Key, entity.Value))
-
-	c.AddLabelIfMissing(ctx, entity)
 
 	bytes, err := json.Marshal(entity)
 	if err != nil {
@@ -250,23 +246,6 @@ func (c *apiClient) DeleteCatalogEntity(ctx context.Context, entity *contracts.C
 	}
 
 	return
-}
-
-func (c *apiClient) AddLabelIfMissing(ctx context.Context, entity *contracts.CatalogEntity) {
-	if entity != nil {
-		hasOwnKeyValueAsLabel := false
-		for _, l := range entity.Labels {
-			if l.Key == entity.Key && l.Value == entity.Value {
-				hasOwnKeyValueAsLabel = true
-			}
-		}
-		if !hasOwnKeyValueAsLabel {
-			entity.Labels = append(entity.Labels, contracts.Label{
-				Key:   entity.Key,
-				Value: entity.Value,
-			})
-		}
-	}
 }
 
 func (c *apiClient) getRequest(uri string, span opentracing.Span, requestBody io.Reader, headers map[string]string, allowedStatusCodes ...int) (responseBody []byte, err error) {

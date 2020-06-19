@@ -5,7 +5,6 @@ import (
 
 	contracts "github.com/estafette/estafette-ci-contracts"
 	"golang.org/x/oauth2/google"
-	cloudassetv1 "google.golang.org/api/cloudasset/v1"
 	crmv1 "google.golang.org/api/cloudresourcemanager/v1"
 	containerv1 "google.golang.org/api/container/v1"
 	iam "google.golang.org/api/iam/v1"
@@ -42,24 +41,17 @@ func NewGoogleCloudClient(ctx context.Context) (GoogleCloudClient, error) {
 		return nil, err
 	}
 
-	cloudassetv1Service, err := cloudassetv1.New(googleClient)
-	if err != nil {
-		return nil, err
-	}
-
 	return &googleCloudClient{
-		crmv1Service:        crmv1Service,
-		containerv1Service:  containerv1Service,
-		pubsubv1Service:     pubsubv1Service,
-		cloudassetv1Service: cloudassetv1Service,
+		crmv1Service:       crmv1Service,
+		containerv1Service: containerv1Service,
+		pubsubv1Service:    pubsubv1Service,
 	}, nil
 }
 
 type googleCloudClient struct {
-	crmv1Service        *crmv1.Service
-	containerv1Service  *containerv1.Service
-	pubsubv1Service     *pubsubv1.Service
-	cloudassetv1Service *cloudassetv1.Service
+	crmv1Service       *crmv1.Service
+	containerv1Service *containerv1.Service
+	pubsubv1Service    *pubsubv1.Service
 }
 
 func (c *googleCloudClient) GetProjects(ctx context.Context, parentEntity *contracts.CatalogEntity) (projects []*contracts.CatalogEntity, err error) {
@@ -96,7 +88,10 @@ func (c *googleCloudClient) GetProjects(ctx context.Context, parentEntity *contr
 			ParentValue: parentEntity.Value,
 			Key:         projectKeyName,
 			Value:       p.ProjectId,
-			Labels:      parentEntity.Labels,
+			Labels: append(parentEntity.Labels, contracts.Label{
+				Key:   projectKeyName,
+				Value: p.ProjectId,
+			}),
 		})
 	}
 
@@ -125,7 +120,10 @@ func (c *googleCloudClient) GetGKEClusters(ctx context.Context, parentEntity *co
 			ParentValue: parentEntity.Value,
 			Key:         gkeClusterKeyName,
 			Value:       cluster.Zone + "/" + cluster.Name,
-			Labels:      parentEntity.Labels,
+			Labels: append(parentEntity.Labels, contracts.Label{
+				Key:   gkeClusterKeyName,
+				Value: cluster.Zone + "/" + cluster.Name,
+			}),
 		})
 	}
 
@@ -166,7 +164,10 @@ func (c *googleCloudClient) GetPubSubTopics(ctx context.Context, parentEntity *c
 			ParentValue: parentEntity.Value,
 			Key:         pubsubTopicKeyName,
 			Value:       topic.Name,
-			Labels:      parentEntity.Labels,
+			Labels: append(parentEntity.Labels, contracts.Label{
+				Key:   pubsubTopicKeyName,
+				Value: topic.Name,
+			}),
 		})
 	}
 
