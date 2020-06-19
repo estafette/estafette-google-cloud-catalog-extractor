@@ -494,6 +494,9 @@ func (c *googleCloudClient) substituteErrorsToIgnore(entities []*contracts.Catal
 	if googleapiErr, ok := err.(*googleapi.Error); ok && googleapiErr.Code == http.StatusBadRequest && err.Error() == "googleapi: Error 400: Unknown project id: 0, invalid" {
 		return entities, ErrUnknownProjectID
 	}
+	if googleapiErr, ok := err.(*googleapi.Error); ok && googleapiErr.Code == http.StatusBadRequest && strings.HasSuffix(err.Error(), "has not enabled BigQuery., invalid") {
+		return entities, ErrAPINotEnabled
+	}
 	if googleapiErr, ok := err.(*googleapi.Error); ok && googleapiErr.Code == http.StatusNotFound && err.Error() == "googleapi: Error 404: The requested project was not found., notFound" {
 		return entities, ErrProjectNotFound
 	}
