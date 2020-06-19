@@ -25,8 +25,11 @@ var (
 	// ErrAPINotEnabled is returned when an api is not enabled
 	ErrAPINotEnabled = errors.New("The api is not enabled")
 
-	// ErrUnknownProjectID is returned when an api throws googleapi: Error 400: Unknown project id: 0, invalid
+	// ErrUnknownProjectID is returned when an api throws 'googleapi: Error 400: Unknown project id: 0, invalid'
 	ErrUnknownProjectID = errors.New("The project id is unknown")
+
+	// ErrProjectNotFound is returned when an api throws 'googleapi: Error 404: The requested project was not found., notFound'
+	ErrProjectNotFound = errors.New("The project is not found")
 )
 
 type GoogleCloudClient interface {
@@ -162,11 +165,7 @@ func (c *googleCloudClient) GetGKEClusters(ctx context.Context, parentEntity *co
 
 	resp, err := listCall.Do()
 	if err != nil {
-		if googleapiErr, ok := err.(*googleapi.Error); ok && googleapiErr.Code == http.StatusForbidden {
-			return clusters, ErrAPINotEnabled
-		}
-
-		return clusters, err
+		return c.substituteErrorsToIgnore(clusters, err)
 	}
 
 	googleClusters = append(googleClusters, resp.Clusters...)
@@ -209,11 +208,7 @@ func (c *googleCloudClient) GetPubSubTopics(ctx context.Context, parentEntity *c
 
 		resp, err := listCall.Do()
 		if err != nil {
-			if googleapiErr, ok := err.(*googleapi.Error); ok && googleapiErr.Code == http.StatusForbidden {
-				return topics, ErrAPINotEnabled
-			}
-
-			return topics, err
+			return c.substituteErrorsToIgnore(topics, err)
 		}
 
 		googlePubsubTopics = append(googlePubsubTopics, resp.Topics...)
@@ -257,11 +252,7 @@ func (c *googleCloudClient) GetCloudFunctions(ctx context.Context, parentEntity 
 
 		resp, err := listCall.Do()
 		if err != nil {
-			if googleapiErr, ok := err.(*googleapi.Error); ok && googleapiErr.Code == http.StatusForbidden {
-				return cloudfunctions, ErrAPINotEnabled
-			}
-
-			return cloudfunctions, err
+			return c.substituteErrorsToIgnore(cloudfunctions, err)
 		}
 
 		googleCloudFunctions = append(googleCloudFunctions, resp.Functions...)
@@ -309,14 +300,7 @@ func (c *googleCloudClient) GetStorageBuckets(ctx context.Context, parentEntity 
 
 		resp, err := listCall.Do()
 		if err != nil {
-			if googleapiErr, ok := err.(*googleapi.Error); ok && googleapiErr.Code == http.StatusForbidden {
-				return buckets, ErrAPINotEnabled
-			}
-			if googleapiErr, ok := err.(*googleapi.Error); ok && googleapiErr.Code == http.StatusBadRequest && err.Error() == "googleapi: Error 400: Unknown project id: 0, invalid" {
-				return buckets, ErrUnknownProjectID
-			}
-
-			return buckets, err
+			return c.substituteErrorsToIgnore(buckets, err)
 		}
 
 		googleStorageBuckets = append(googleStorageBuckets, resp.Items...)
@@ -363,11 +347,7 @@ func (c *googleCloudClient) GetDataflowJobs(ctx context.Context, parentEntity *c
 
 		resp, err := listCall.Do()
 		if err != nil {
-			if googleapiErr, ok := err.(*googleapi.Error); ok && googleapiErr.Code == http.StatusForbidden {
-				return jobs, ErrAPINotEnabled
-			}
-
-			return jobs, err
+			return c.substituteErrorsToIgnore(jobs, err)
 		}
 
 		googleDataflowJobs = append(googleDataflowJobs, resp.Jobs...)
@@ -410,11 +390,7 @@ func (c *googleCloudClient) GetBigqueryDatasets(ctx context.Context, parentEntit
 
 		resp, err := listCall.Do()
 		if err != nil {
-			if googleapiErr, ok := err.(*googleapi.Error); ok && googleapiErr.Code == http.StatusForbidden {
-				return datasets, ErrAPINotEnabled
-			}
-
-			return datasets, err
+			return c.substituteErrorsToIgnore(datasets, err)
 		}
 
 		googleBigqueryDatasets = append(googleBigqueryDatasets, resp.Datasets...)
@@ -443,4 +419,18 @@ func (c *googleCloudClient) GetBigqueryDatasets(ctx context.Context, parentEntit
 	}
 
 	return
+}
+
+func (c *googleCloudClient) substituteErrorsToIgnore(entities []*contracts.CatalogEntity, err error) ([]*contracts.CatalogEntity, error) {
+	if googleapiErr, ok := err.(*googleapi.Error); ok && googleapiErr.Code == http.StatusForbidden {
+		return entities, ErrAPINotEnabled
+	}
+	if googleapiErr, ok := err.(*googleapi.Error); ok && googleapiErr.Code == http.StatusBadRequest && err.Error() == "googleapi: Error 400: Unknown project id: 0, invalid" {
+		return entities, ErrUnknownProjectID
+	}
+	if googleapiErr, ok := err.(*googleapi.Error); ok && googleapiErr.Code == http.StatusNotFound && err.Error() == "googleapi: Error 404: The requested project was not found., notFound" {
+		return entities, ErrProjectNotFound
+	}
+
+	return entities, err
 }
