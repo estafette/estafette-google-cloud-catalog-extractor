@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	contracts "github.com/estafette/estafette-ci-contracts"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2/google"
 	cloudfunctionsv1 "google.golang.org/api/cloudfunctions/v1"
 	crmv1 "google.golang.org/api/cloudresourcemanager/v1"
@@ -95,6 +96,8 @@ func (c *googleCloudClient) GetProjects(ctx context.Context, parentEntity *contr
 
 	// https://cloud.google.com/resource-manager/reference/rest/v1/projects
 
+	log.Debug().Msg("Retrieving Google Cloud projects")
+
 	googleProjects := make([]*crmv1.Project, 0)
 	nextPageToken := ""
 
@@ -143,6 +146,8 @@ func (c *googleCloudClient) GetGKEClusters(ctx context.Context, parentEntity *co
 
 	// https://cloud.google.com/kubernetes-engine/docs/reference/rest/v1/projects.zones.clusters/list
 
+	log.Debug().Msgf("Retrieving GKE clusters for project %v", parentEntity.Value)
+
 	googleClusters := make([]*containerv1.Cluster, 0)
 
 	listCall := c.containerv1Service.Projects.Zones.Clusters.List(parentEntity.Value, "-")
@@ -178,6 +183,8 @@ func (c *googleCloudClient) GetGKEClusters(ctx context.Context, parentEntity *co
 func (c *googleCloudClient) GetPubSubTopics(ctx context.Context, parentEntity *contracts.CatalogEntity) (topics []*contracts.CatalogEntity, err error) {
 
 	// https://cloud.google.com/pubsub/docs/reference/rest/v1/projects.topics/list
+
+	log.Debug().Msgf("Retrieving Pub/Sub topics for project %v", parentEntity.Value)
 
 	googlePubsubTopics := make([]*pubsubv1.Topic, 0)
 	nextPageToken := ""
@@ -224,6 +231,9 @@ func (c *googleCloudClient) GetPubSubTopics(ctx context.Context, parentEntity *c
 }
 
 func (c *googleCloudClient) GetCloudFunctions(ctx context.Context, parentEntity *contracts.CatalogEntity) (cloudfunctions []*contracts.CatalogEntity, err error) {
+
+	log.Debug().Msgf("Retrieving Google Cloud Functions for project %v", parentEntity.Value)
+
 	googleCloudFunctions := make([]*cloudfunctionsv1.CloudFunction, 0)
 	nextPageToken := ""
 
@@ -273,6 +283,9 @@ func (c *googleCloudClient) GetCloudFunctions(ctx context.Context, parentEntity 
 }
 
 func (c *googleCloudClient) GetStorageBuckets(ctx context.Context, parentEntity *contracts.CatalogEntity) (buckets []*contracts.CatalogEntity, err error) {
+
+	log.Debug().Msgf("Retrieving Google Cloud storage buckets for project %v", parentEntity.Value)
+
 	googleStorageBuckets := make([]*storagev1.Bucket, 0)
 	nextPageToken := ""
 
@@ -318,6 +331,9 @@ func (c *googleCloudClient) GetStorageBuckets(ctx context.Context, parentEntity 
 }
 
 func (c *googleCloudClient) GetDataflowJobs(ctx context.Context, parentEntity *contracts.CatalogEntity) (jobs []*contracts.CatalogEntity, err error) {
+
+	log.Debug().Msgf("Retrieving Google Cloud Dataflow jobs for project %v", parentEntity.Value)
+
 	googleDataflowJobs := make([]*dataflowv1b3.Job, 0)
 	nextPageToken := ""
 
