@@ -79,6 +79,8 @@ releases:
         kind: cronjob
         schedule: '*/5 * * * *'
         concurrencypolicy: Forbid
+        restartPolicy: Never
+        backoffLimit: 0
         namespace: estafette-ci
         container:
           repository: estafette
