@@ -174,6 +174,14 @@ func (e *extractor) runProjects(ctx context.Context, parentEntity *contracts.Cat
 		return err
 	}
 
+	// fetch cloudsql instances for each project
+	err = e.loopEntitiesInParallel(ctx, 5, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) error {
+		return e.runFunction(ctx, projectKeyName, cloudsqlInstanceKeyName, entity, e.googleCloudClient.GetCloudSQLDatabaseInstances, true)
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

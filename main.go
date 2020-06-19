@@ -32,16 +32,17 @@ var (
 )
 
 const (
-	organizationKeyName    = "organization"
-	cloudKeyName           = "cloud"
-	projectKeyName         = "project"
-	gkeClusterKeyName      = "gke-cluster"
-	pubsubTopicKeyName     = "pubsub-topic"
-	cloudfunctionKeyName   = "cloud-function"
-	storageBucketKeyName   = "storage-bucket"
-	dataflowJobKeyName     = "dataflow-job"
-	bigqueryDatasetKeyName = "bigquery-dataset"
-	bigqueryTableKeyName   = "bigquery-table"
+	organizationKeyName     = "organization"
+	cloudKeyName            = "cloud"
+	projectKeyName          = "project"
+	gkeClusterKeyName       = "gke-cluster"
+	pubsubTopicKeyName      = "pubsub-topic"
+	cloudfunctionKeyName    = "cloud-function"
+	storageBucketKeyName    = "storage-bucket"
+	dataflowJobKeyName      = "dataflow-job"
+	bigqueryDatasetKeyName  = "bigquery-dataset"
+	bigqueryTableKeyName    = "bigquery-table"
+	cloudsqlInstanceKeyName = "cloudsql-instance"
 )
 
 const cloudKeyValue = "Google Cloud"

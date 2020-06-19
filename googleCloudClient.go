@@ -18,6 +18,7 @@ import (
 	"google.golang.org/api/googleapi"
 	iam "google.golang.org/api/iam/v1"
 	pubsubv1 "google.golang.org/api/pubsub/v1"
+	sqlv1beta4 "google.golang.org/api/sql/v1beta4"
 	storagev1 "google.golang.org/api/storage/v1"
 )
 
@@ -40,6 +41,7 @@ type GoogleCloudClient interface {
 	GetStorageBuckets(ctx context.Context, parentEntity *contracts.CatalogEntity) (buckets []*contracts.CatalogEntity, err error)
 	GetDataflowJobs(ctx context.Context, parentEntity *contracts.CatalogEntity) (jobs []*contracts.CatalogEntity, err error)
 	GetBigqueryDatasets(ctx context.Context, parentEntity *contracts.CatalogEntity) (datasets []*contracts.CatalogEntity, err error)
+	GetCloudSQLDatabaseInstances(ctx context.Context, parentEntity *contracts.CatalogEntity) (instances []*contracts.CatalogEntity, err error)
 }
 
 // NewGoogleCloudClient returns a new GoogleCloudClient
@@ -86,6 +88,11 @@ func NewGoogleCloudClient(ctx context.Context) (GoogleCloudClient, error) {
 		return nil, err
 	}
 
+	sqlv1beta4Service, err := sqlv1beta4.New(googleClient)
+	if err != nil {
+		return nil, err
+	}
+
 	return &googleCloudClient{
 		crmv1Service:            crmv1Service,
 		containerv1Service:      containerv1Service,
@@ -94,6 +101,7 @@ func NewGoogleCloudClient(ctx context.Context) (GoogleCloudClient, error) {
 		dataflowv1b3Service:     dataflowv1b3Service,
 		storagev1Service:        storagev1Service,
 		bigqueryv2Service:       bigqueryv2Service,
+		sqlv1beta4Service:       sqlv1beta4Service,
 	}, nil
 }
 
@@ -105,6 +113,7 @@ type googleCloudClient struct {
 	dataflowv1b3Service     *dataflowv1b3.Service
 	storagev1Service        *storagev1.Service
 	bigqueryv2Service       *bigqueryv2.Service
+	sqlv1beta4Service       *sqlv1beta4.Service
 }
 
 func (c *googleCloudClient) GetProjects(ctx context.Context, parentEntity *contracts.CatalogEntity) (projects []*contracts.CatalogEntity, err error) {
@@ -414,6 +423,52 @@ func (c *googleCloudClient) GetBigqueryDatasets(ctx context.Context, parentEntit
 			}, contracts.Label{
 				Key:   locationLabelKey,
 				Value: dataset.Location,
+			}),
+		})
+	}
+
+	return
+}
+
+func (c *googleCloudClient) GetCloudSQLDatabaseInstances(ctx context.Context, parentEntity *contracts.CatalogEntity) (instances []*contracts.CatalogEntity, err error) {
+	log.Debug().Msgf("Retrieving BigQuery datasets for project %v", parentEntity.Value)
+
+	googleCloudSQLInstances := make([]*sqlv1beta4.DatabaseInstance, 0)
+	nextPageToken := ""
+
+	for {
+		// retrieving bigquery datasets (by page)
+		listCall := c.sqlv1beta4Service.Instances.List(parentEntity.Value)
+		if nextPageToken != "" {
+			listCall.PageToken(nextPageToken)
+		}
+
+		resp, err := listCall.Do()
+		if err != nil {
+			return c.substituteErrorsToIgnore(instances, err)
+		}
+
+		googleCloudSQLInstances = append(googleCloudSQLInstances, resp.Items...)
+
+		if resp.NextPageToken == "" {
+			break
+		}
+		nextPageToken = resp.NextPageToken
+	}
+
+	instances = make([]*contracts.CatalogEntity, 0)
+	for _, instance := range googleCloudSQLInstances {
+		instances = append(instances, &contracts.CatalogEntity{
+			ParentKey:   parentEntity.Key,
+			ParentValue: parentEntity.Value,
+			Key:         cloudsqlInstanceKeyName,
+			Value:       instance.Name,
+			Labels: append(parentEntity.Labels, contracts.Label{
+				Key:   cloudsqlInstanceKeyName,
+				Value: instance.Name,
+			}, contracts.Label{
+				Key:   locationLabelKey,
+				Value: instance.Region,
 			}),
 		})
 	}
