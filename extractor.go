@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -226,12 +227,17 @@ func (e *extractor) runFunction(ctx context.Context, acceptedParentKeyName, curr
 		return fmt.Errorf("Parent key is invalid; %v instead of %v", parentEntity.Key, acceptedParentKeyName)
 	}
 
-	currentEntities, err := e.apiClient.GetCatalogEntities(ctx, parentEntity.Key, parentEntity.Value, currentEntityKeyName)
+	desiredEntities, err := desiredEntitiesFunc(ctx, parentEntity)
 	if err != nil {
+		if errors.Is(err, ErrAPINotEnabled) {
+			// ignoring api is not enabled errors and continueing, since if the api is disabled the parent will not have resources of that type anyway
+			return nil
+		}
+
 		return err
 	}
 
-	desiredEntities, err := desiredEntitiesFunc(ctx, parentEntity)
+	currentEntities, err := e.apiClient.GetCatalogEntities(ctx, parentEntity.Key, parentEntity.Value, currentEntityKeyName)
 	if err != nil {
 		return err
 	}
@@ -279,7 +285,7 @@ func (e *extractor) loopEntitiesInParallel(ctx context.Context, concurrency int,
 func (e *extractor) entitiesAreEqual(currentEntity *contracts.CatalogEntity, desiredEntity *contracts.CatalogEntity) bool {
 
 	// id, parent key, parent value, key and value are immutable so no need to check those
-	log.Debug().Interface("currentEntity", *currentEntity).Interface("desiredEntity", *desiredEntity).Msg("Comparing equality of entities")
+	// log.Debug().Interface("currentEntity", *currentEntity).Interface("desiredEntity", *desiredEntity).Msg("Comparing equality of entities")
 
 	// compare LinkedPipeline
 	if currentEntity.LinkedPipeline != desiredEntity.LinkedPipeline {

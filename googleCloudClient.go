@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 
 	contracts "github.com/estafette/estafette-ci-contracts"
 	"golang.org/x/oauth2/google"
@@ -10,9 +12,15 @@ import (
 	crmv1 "google.golang.org/api/cloudresourcemanager/v1"
 	containerv1 "google.golang.org/api/container/v1"
 	dataflowv1b3 "google.golang.org/api/dataflow/v1b3"
+	"google.golang.org/api/googleapi"
 	iam "google.golang.org/api/iam/v1"
 	pubsubv1 "google.golang.org/api/pubsub/v1"
 	storagev1 "google.golang.org/api/storage/v1"
+)
+
+var (
+	// ErrAPINotEnabled is returned when an api is not enabled
+	ErrAPINotEnabled = errors.New("The api is not enabled")
 )
 
 type GoogleCloudClient interface {
@@ -136,6 +144,10 @@ func (c *googleCloudClient) GetGKEClusters(ctx context.Context, parentEntity *co
 
 	resp, err := listCall.Do()
 	if err != nil {
+		if googleapiErr, ok := err.(*googleapi.Error); ok && googleapiErr.Code == http.StatusForbidden {
+			return clusters, ErrAPINotEnabled
+		}
+
 		return clusters, err
 	}
 
@@ -174,6 +186,10 @@ func (c *googleCloudClient) GetPubSubTopics(ctx context.Context, parentEntity *c
 
 		resp, err := listCall.Do()
 		if err != nil {
+			if googleapiErr, ok := err.(*googleapi.Error); ok && googleapiErr.Code == http.StatusForbidden {
+				return topics, ErrAPINotEnabled
+			}
+
 			return topics, err
 		}
 
@@ -215,6 +231,10 @@ func (c *googleCloudClient) GetCloudFunctions(ctx context.Context, parentEntity 
 
 		resp, err := listCall.Do()
 		if err != nil {
+			if googleapiErr, ok := err.(*googleapi.Error); ok && googleapiErr.Code == http.StatusForbidden {
+				return cloudfunctions, ErrAPINotEnabled
+			}
+
 			return cloudfunctions, err
 		}
 
@@ -225,6 +245,8 @@ func (c *googleCloudClient) GetCloudFunctions(ctx context.Context, parentEntity 
 		}
 		nextPageToken = resp.NextPageToken
 	}
+
+	// cloud-function = projects/travix-staging/locations/us-central1/functions/sendReleaseToBigQuery
 
 	cloudfunctions = make([]*contracts.CatalogEntity, 0)
 	for _, cloudfunction := range googleCloudFunctions {
@@ -256,6 +278,10 @@ func (c *googleCloudClient) GetStorageBuckets(ctx context.Context, parentEntity 
 
 		resp, err := listCall.Do()
 		if err != nil {
+			if googleapiErr, ok := err.(*googleapi.Error); ok && googleapiErr.Code == http.StatusForbidden {
+				return buckets, ErrAPINotEnabled
+			}
+
 			return buckets, err
 		}
 
@@ -297,6 +323,10 @@ func (c *googleCloudClient) GetDataflowJobs(ctx context.Context, parentEntity *c
 
 		resp, err := listCall.Do()
 		if err != nil {
+			if googleapiErr, ok := err.(*googleapi.Error); ok && googleapiErr.Code == http.StatusForbidden {
+				return jobs, ErrAPINotEnabled
+			}
+
 			return jobs, err
 		}
 
