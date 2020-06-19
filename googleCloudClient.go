@@ -23,6 +23,9 @@ import (
 var (
 	// ErrAPINotEnabled is returned when an api is not enabled
 	ErrAPINotEnabled = errors.New("The api is not enabled")
+
+	// ErrUnknownProjectID is returned when an api throws googleapi: Error 400: Unknown project id: 0, invalid
+	ErrUnknownProjectID = errors.New("The project id is unknown")
 )
 
 type GoogleCloudClient interface {
@@ -123,10 +126,6 @@ func (c *googleCloudClient) GetProjects(ctx context.Context, parentEntity *contr
 
 	projects = make([]*contracts.CatalogEntity, 0)
 	for _, p := range googleProjects {
-		if p.ProjectId == "" || p.ProjectId == "0" {
-			continue
-		}
-
 		projects = append(projects, &contracts.CatalogEntity{
 			ParentKey:   parentEntity.Key,
 			ParentValue: parentEntity.Value,
@@ -238,7 +237,7 @@ func (c *googleCloudClient) GetCloudFunctions(ctx context.Context, parentEntity 
 	nextPageToken := ""
 
 	for {
-		// retrieving pubsub topics (by page)
+		// retrieving cloud functions (by page)
 		listCall := c.cloudfunctionsv1Service.Projects.Locations.Functions.List(fmt.Sprintf("projects/%v/locations/-", parentEntity.Value))
 		if nextPageToken != "" {
 			listCall.PageToken(nextPageToken)
@@ -284,13 +283,17 @@ func (c *googleCloudClient) GetCloudFunctions(ctx context.Context, parentEntity 
 
 func (c *googleCloudClient) GetStorageBuckets(ctx context.Context, parentEntity *contracts.CatalogEntity) (buckets []*contracts.CatalogEntity, err error) {
 
+	if parentEntity.Value == "" || parentEntity.Value == "0" {
+
+	}
+
 	log.Debug().Msgf("Retrieving Google Cloud storage buckets for project %v", parentEntity.Value)
 
 	googleStorageBuckets := make([]*storagev1.Bucket, 0)
 	nextPageToken := ""
 
 	for {
-		// retrieving pubsub topics (by page)
+		// retrieving storage buckets (by page)
 		listCall := c.storagev1Service.Buckets.List(parentEntity.Value)
 		if nextPageToken != "" {
 			listCall.PageToken(nextPageToken)
@@ -300,6 +303,9 @@ func (c *googleCloudClient) GetStorageBuckets(ctx context.Context, parentEntity 
 		if err != nil {
 			if googleapiErr, ok := err.(*googleapi.Error); ok && googleapiErr.Code == http.StatusForbidden {
 				return buckets, ErrAPINotEnabled
+			}
+			if googleapiErr, ok := err.(*googleapi.Error); ok && googleapiErr.Code == http.StatusBadRequest && err.Error() == "googleapi: Error 400: Unknown project id: 0, invalid" {
+				return buckets, ErrUnknownProjectID
 			}
 
 			return buckets, err
@@ -338,7 +344,7 @@ func (c *googleCloudClient) GetDataflowJobs(ctx context.Context, parentEntity *c
 	nextPageToken := ""
 
 	for {
-		// retrieving pubsub topics (by page)
+		// retrieving dataflow jobs (by page)
 		listCall := c.dataflowv1b3Service.Projects.Jobs.List(parentEntity.Value)
 		if nextPageToken != "" {
 			listCall.PageToken(nextPageToken)
