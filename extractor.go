@@ -127,7 +127,7 @@ func (e *extractor) runProjects(ctx context.Context, parentEntity *contracts.Cat
 
 	// fetch gke clusters for each project
 	err = e.loopEntitiesInParallel(ctx, 5, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) error {
-		return e.runGKEClusters(ctx, entity)
+		return e.runFunction(ctx, projectKeyName, gkeClusterKeyName, entity, e.googleCloudClient.GetGKEClusters, true)
 	})
 	if err != nil {
 		return err
@@ -135,56 +135,32 @@ func (e *extractor) runProjects(ctx context.Context, parentEntity *contracts.Cat
 
 	// // fetch pubsub topics for each project
 	// err = e.loopEntitiesInParallel(ctx, 5, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) error {
-	// 	return e.runPubSubTopics(ctx, entity)
+	// 	return e.runFunction(ctx, projectKeyName, pubsubTopicKeyName, entity, e.googleCloudClient.GetPubSubTopics, true)
 	// })
 	// if err != nil {
 	// 	return err
 	// }
 
-	return nil
-}
-
-func (e *extractor) runGKEClusters(ctx context.Context, parentEntity *contracts.CatalogEntity) (err error) {
-
-	if parentEntity.Key != projectKeyName {
-		return fmt.Errorf("Parent key is invalid; %v instead of %v", parentEntity.Key, projectKeyName)
-	}
-
-	currentGKEClusters, err := e.apiClient.GetCatalogEntities(ctx, parentEntity.Key, parentEntity.Value, gkeClusterKeyName)
+	// fetch cloud functions for each project
+	err = e.loopEntitiesInParallel(ctx, 5, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) error {
+		return e.runFunction(ctx, projectKeyName, cloudfunctionKeyName, entity, e.googleCloudClient.GetCloudFunctions, true)
+	})
 	if err != nil {
 		return err
 	}
 
-	desiredGKEClusters, err := e.googleCloudClient.GetGKEClusters(ctx, parentEntity)
+	// fetch storage buckets for each project
+	err = e.loopEntitiesInParallel(ctx, 5, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) error {
+		return e.runFunction(ctx, projectKeyName, storageBucketKeyName, entity, e.googleCloudClient.GetStorageBuckets, true)
+	})
 	if err != nil {
 		return err
 	}
 
-	err = e.syncEntities(ctx, currentGKEClusters, desiredGKEClusters, true)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (e *extractor) runPubSubTopics(ctx context.Context, parentEntity *contracts.CatalogEntity) (err error) {
-
-	if parentEntity.Key != projectKeyName {
-		return fmt.Errorf("Parent key is invalid; %v instead of %v", parentEntity.Key, projectKeyName)
-	}
-
-	currentTopics, err := e.apiClient.GetCatalogEntities(ctx, parentEntity.Key, parentEntity.Value, pubsubTopicKeyName)
-	if err != nil {
-		return err
-	}
-
-	desiredTopics, err := e.googleCloudClient.GetPubSubTopics(ctx, parentEntity)
-	if err != nil {
-		return err
-	}
-
-	err = e.syncEntities(ctx, currentTopics, desiredTopics, true)
+	// fetch dataflow jobs for each project
+	err = e.loopEntitiesInParallel(ctx, 5, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) error {
+		return e.runFunction(ctx, projectKeyName, dataflowJobKeyName, entity, e.googleCloudClient.GetDataflowJobs, true)
+	})
 	if err != nil {
 		return err
 	}
@@ -239,6 +215,30 @@ func (e *extractor) syncEntities(ctx context.Context, currentEntities []*contrac
 				return
 			}
 		}
+	}
+
+	return nil
+}
+
+func (e *extractor) runFunction(ctx context.Context, acceptedParentKeyName, currentEntityKeyName string, parentEntity *contracts.CatalogEntity, desiredEntitiesFunc func(ctx context.Context, parentEntity *contracts.CatalogEntity) (desiredEntities []*contracts.CatalogEntity, err error), deleteIfNotDesired bool) (err error) {
+
+	if parentEntity.Key != acceptedParentKeyName {
+		return fmt.Errorf("Parent key is invalid; %v instead of %v", parentEntity.Key, acceptedParentKeyName)
+	}
+
+	currentEntities, err := e.apiClient.GetCatalogEntities(ctx, parentEntity.Key, parentEntity.Value, currentEntityKeyName)
+	if err != nil {
+		return err
+	}
+
+	desiredEntities, err := desiredEntitiesFunc(ctx, parentEntity)
+	if err != nil {
+		return err
+	}
+
+	err = e.syncEntities(ctx, currentEntities, desiredEntities, deleteIfNotDesired)
+	if err != nil {
+		return err
 	}
 
 	return nil

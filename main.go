@@ -32,11 +32,14 @@ var (
 )
 
 const (
-	organizationKeyName = "organization"
-	cloudKeyName        = "cloud"
-	projectKeyName      = "project"
-	gkeClusterKeyName   = "gke-cluster"
-	pubsubTopicKeyName  = "pubsub-topic"
+	organizationKeyName  = "organization"
+	cloudKeyName         = "cloud"
+	projectKeyName       = "project"
+	gkeClusterKeyName    = "gke-cluster"
+	pubsubTopicKeyName   = "pubsub-topic"
+	cloudfunctionKeyName = "cloud-function"
+	storageBucketKeyName = "storage-bucket"
+	dataflowJobKeyName   = "dataflow-job"
 )
 
 const cloudKeyValue = "Google Cloud"

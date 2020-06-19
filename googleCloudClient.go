@@ -2,19 +2,26 @@ package main
 
 import (
 	"context"
+	"fmt"
 
 	contracts "github.com/estafette/estafette-ci-contracts"
 	"golang.org/x/oauth2/google"
+	cloudfunctionsv1 "google.golang.org/api/cloudfunctions/v1"
 	crmv1 "google.golang.org/api/cloudresourcemanager/v1"
 	containerv1 "google.golang.org/api/container/v1"
+	dataflowv1b3 "google.golang.org/api/dataflow/v1b3"
 	iam "google.golang.org/api/iam/v1"
 	pubsubv1 "google.golang.org/api/pubsub/v1"
+	storagev1 "google.golang.org/api/storage/v1"
 )
 
 type GoogleCloudClient interface {
 	GetProjects(ctx context.Context, parentEntity *contracts.CatalogEntity) (projects []*contracts.CatalogEntity, err error)
 	GetGKEClusters(ctx context.Context, parentEntity *contracts.CatalogEntity) (clusters []*contracts.CatalogEntity, err error)
 	GetPubSubTopics(ctx context.Context, parentEntity *contracts.CatalogEntity) (topics []*contracts.CatalogEntity, err error)
+	GetCloudFunctions(ctx context.Context, parentEntity *contracts.CatalogEntity) (cloudfunctions []*contracts.CatalogEntity, err error)
+	GetStorageBuckets(ctx context.Context, parentEntity *contracts.CatalogEntity) (buckets []*contracts.CatalogEntity, err error)
+	GetDataflowJobs(ctx context.Context, parentEntity *contracts.CatalogEntity) (jobs []*contracts.CatalogEntity, err error)
 }
 
 // NewGoogleCloudClient returns a new GoogleCloudClient
@@ -41,17 +48,38 @@ func NewGoogleCloudClient(ctx context.Context) (GoogleCloudClient, error) {
 		return nil, err
 	}
 
+	cloudfunctionsv1Service, err := cloudfunctionsv1.New(googleClient)
+	if err != nil {
+		return nil, err
+	}
+
+	dataflowv1b3Service, err := dataflowv1b3.New(googleClient)
+	if err != nil {
+		return nil, err
+	}
+
+	storagev1Service, err := storagev1.New(googleClient)
+	if err != nil {
+		return nil, err
+	}
+
 	return &googleCloudClient{
-		crmv1Service:       crmv1Service,
-		containerv1Service: containerv1Service,
-		pubsubv1Service:    pubsubv1Service,
+		crmv1Service:            crmv1Service,
+		containerv1Service:      containerv1Service,
+		pubsubv1Service:         pubsubv1Service,
+		cloudfunctionsv1Service: cloudfunctionsv1Service,
+		dataflowv1b3Service:     dataflowv1b3Service,
+		storagev1Service:        storagev1Service,
 	}, nil
 }
 
 type googleCloudClient struct {
-	crmv1Service       *crmv1.Service
-	containerv1Service *containerv1.Service
-	pubsubv1Service    *pubsubv1.Service
+	crmv1Service            *crmv1.Service
+	containerv1Service      *containerv1.Service
+	pubsubv1Service         *pubsubv1.Service
+	cloudfunctionsv1Service *cloudfunctionsv1.Service
+	dataflowv1b3Service     *dataflowv1b3.Service
+	storagev1Service        *storagev1.Service
 }
 
 func (c *googleCloudClient) GetProjects(ctx context.Context, parentEntity *contracts.CatalogEntity) (projects []*contracts.CatalogEntity, err error) {
@@ -167,6 +195,129 @@ func (c *googleCloudClient) GetPubSubTopics(ctx context.Context, parentEntity *c
 			Labels: append(parentEntity.Labels, contracts.Label{
 				Key:   pubsubTopicKeyName,
 				Value: topic.Name,
+			}),
+		})
+	}
+
+	return
+}
+
+func (c *googleCloudClient) GetCloudFunctions(ctx context.Context, parentEntity *contracts.CatalogEntity) (cloudfunctions []*contracts.CatalogEntity, err error) {
+	googleCloudFunctions := make([]*cloudfunctionsv1.CloudFunction, 0)
+	nextPageToken := ""
+
+	for {
+		// retrieving pubsub topics (by page)
+		listCall := c.cloudfunctionsv1Service.Projects.Locations.Functions.List(fmt.Sprintf("projects/%v/locations/-", parentEntity.Value))
+		if nextPageToken != "" {
+			listCall.PageToken(nextPageToken)
+		}
+
+		resp, err := listCall.Do()
+		if err != nil {
+			return cloudfunctions, err
+		}
+
+		googleCloudFunctions = append(googleCloudFunctions, resp.Functions...)
+
+		if resp.NextPageToken == "" {
+			break
+		}
+		nextPageToken = resp.NextPageToken
+	}
+
+	cloudfunctions = make([]*contracts.CatalogEntity, 0)
+	for _, cloudfunction := range googleCloudFunctions {
+		cloudfunctions = append(cloudfunctions, &contracts.CatalogEntity{
+			ParentKey:   parentEntity.Key,
+			ParentValue: parentEntity.Value,
+			Key:         cloudfunctionKeyName,
+			Value:       cloudfunction.Name,
+			Labels: append(parentEntity.Labels, contracts.Label{
+				Key:   cloudfunctionKeyName,
+				Value: cloudfunction.Name,
+			}),
+		})
+	}
+
+	return
+}
+
+func (c *googleCloudClient) GetStorageBuckets(ctx context.Context, parentEntity *contracts.CatalogEntity) (buckets []*contracts.CatalogEntity, err error) {
+	googleStorageBuckets := make([]*storagev1.Bucket, 0)
+	nextPageToken := ""
+
+	for {
+		// retrieving pubsub topics (by page)
+		listCall := c.storagev1Service.Buckets.List(parentEntity.Value)
+		if nextPageToken != "" {
+			listCall.PageToken(nextPageToken)
+		}
+
+		resp, err := listCall.Do()
+		if err != nil {
+			return buckets, err
+		}
+
+		googleStorageBuckets = append(googleStorageBuckets, resp.Items...)
+
+		if resp.NextPageToken == "" {
+			break
+		}
+		nextPageToken = resp.NextPageToken
+	}
+
+	buckets = make([]*contracts.CatalogEntity, 0)
+	for _, bucket := range googleStorageBuckets {
+		buckets = append(buckets, &contracts.CatalogEntity{
+			ParentKey:   parentEntity.Key,
+			ParentValue: parentEntity.Value,
+			Key:         storageBucketKeyName,
+			Value:       bucket.Name,
+			Labels: append(parentEntity.Labels, contracts.Label{
+				Key:   storageBucketKeyName,
+				Value: bucket.Name,
+			}),
+		})
+	}
+
+	return
+}
+
+func (c *googleCloudClient) GetDataflowJobs(ctx context.Context, parentEntity *contracts.CatalogEntity) (jobs []*contracts.CatalogEntity, err error) {
+	googleDataflowJobs := make([]*dataflowv1b3.Job, 0)
+	nextPageToken := ""
+
+	for {
+		// retrieving pubsub topics (by page)
+		listCall := c.dataflowv1b3Service.Projects.Jobs.List(parentEntity.Value)
+		if nextPageToken != "" {
+			listCall.PageToken(nextPageToken)
+		}
+
+		resp, err := listCall.Do()
+		if err != nil {
+			return jobs, err
+		}
+
+		googleDataflowJobs = append(googleDataflowJobs, resp.Jobs...)
+
+		if resp.NextPageToken == "" {
+			break
+		}
+		nextPageToken = resp.NextPageToken
+	}
+
+	jobs = make([]*contracts.CatalogEntity, 0)
+	for _, job := range googleDataflowJobs {
+		jobs = append(jobs, &contracts.CatalogEntity{
+			ParentKey:   parentEntity.Key,
+			ParentValue: parentEntity.Value,
+			Key:         dataflowJobKeyName,
+			Value:       job.Name,
+			Labels: append(parentEntity.Labels, contracts.Label{
+				Key:   dataflowJobKeyName,
+				Value: job.Name,
 			}),
 		})
 	}
