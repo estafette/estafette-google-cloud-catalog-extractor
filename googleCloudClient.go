@@ -11,6 +11,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2/google"
 	bigqueryv2 "google.golang.org/api/bigquery/v2"
+	bigtableadminv2 "google.golang.org/api/bigtableadmin/v2"
 	cloudfunctionsv1 "google.golang.org/api/cloudfunctions/v1"
 	crmv1 "google.golang.org/api/cloudresourcemanager/v1"
 	containerv1 "google.golang.org/api/container/v1"
@@ -48,6 +49,8 @@ type GoogleCloudClient interface {
 	GetBigqueryTables(ctx context.Context, parentEntity *contracts.CatalogEntity) (tables []*contracts.CatalogEntity, err error)
 	GetCloudSQLDatabaseInstances(ctx context.Context, parentEntity *contracts.CatalogEntity) (instances []*contracts.CatalogEntity, err error)
 	GetCloudSQLDatabases(ctx context.Context, parentEntity *contracts.CatalogEntity) (databases []*contracts.CatalogEntity, err error)
+	GetBigTableInstances(ctx context.Context, parentEntity *contracts.CatalogEntity) (instances []*contracts.CatalogEntity, err error)
+	GetBigTableClusters(ctx context.Context, parentEntity *contracts.CatalogEntity) (clusters []*contracts.CatalogEntity, err error)
 }
 
 // NewGoogleCloudClient returns a new GoogleCloudClient
@@ -103,6 +106,7 @@ func NewGoogleCloudClient(ctx context.Context) (GoogleCloudClient, error) {
 	if err != nil {
 		return nil, err
 	}
+	bigtableadminv2Service, err := bigtableadminv2.New(googleClient)
 
 	return &googleCloudClient{
 		crmv1Service:            crmv1Service,
@@ -114,6 +118,7 @@ func NewGoogleCloudClient(ctx context.Context) (GoogleCloudClient, error) {
 		bigqueryv2Service:       bigqueryv2Service,
 		sqlv1beta4Service:       sqlv1beta4Service,
 		datastorev1Service:      datastorev1Service,
+		bigtableadminv2Service:  bigtableadminv2Service,
 	}, nil
 }
 
@@ -127,6 +132,7 @@ type googleCloudClient struct {
 	bigqueryv2Service       *bigqueryv2.Service
 	sqlv1beta4Service       *sqlv1beta4.Service
 	datastorev1Service      *datastorev1.Service
+	bigtableadminv2Service  *bigtableadminv2.Service
 }
 
 func (c *googleCloudClient) GetProjects(ctx context.Context, parentEntity *contracts.CatalogEntity) (projects []*contracts.CatalogEntity, err error) {
@@ -568,6 +574,110 @@ func (c *googleCloudClient) GetCloudSQLDatabases(ctx context.Context, parentEnti
 			Labels: append(parentEntity.Labels, contracts.Label{
 				Key:   cloudsqlDatabaseKeyName,
 				Value: database.Name,
+			}),
+		})
+	}
+
+	return
+}
+
+func (c *googleCloudClient) GetBigTableInstances(ctx context.Context, parentEntity *contracts.CatalogEntity) (instances []*contracts.CatalogEntity, err error) {
+	log.Debug().Msgf("Retrieving BigTable instances for project %v", parentEntity.Value)
+
+	googleBigTableInstances := make([]*bigtableadminv2.Instance, 0)
+	nextPageToken := ""
+
+	for {
+		// retrieving cloud sql instances (by page)
+		listCall := c.bigtableadminv2Service.Projects.Instances.List(fmt.Sprintf("projects/%v", parentEntity.Value))
+		if nextPageToken != "" {
+			listCall.PageToken(nextPageToken)
+		}
+
+		resp, err := listCall.Do()
+		if err != nil {
+			return c.substituteErrorsToIgnore(instances, err)
+		}
+
+		googleBigTableInstances = append(googleBigTableInstances, resp.Instances...)
+
+		if resp.NextPageToken == "" {
+			break
+		}
+		nextPageToken = resp.NextPageToken
+	}
+
+	instances = make([]*contracts.CatalogEntity, 0)
+	for _, instance := range googleBigTableInstances {
+		// projects/{project}/instances/a-z+[a-z0-9]
+		instanceNameParts := strings.Split(instance.Name, "/")
+		if len(instanceNameParts) == 0 {
+			return instances, fmt.Errorf("Bigtable instance name '%v' is incorrect", instance.Name)
+		}
+		instanceName := instanceNameParts[len(instanceNameParts)-1]
+
+		instances = append(instances, &contracts.CatalogEntity{
+			ParentKey:   parentEntity.Key,
+			ParentValue: parentEntity.Value,
+			Key:         bigtableInstanceKeyName,
+			Value:       instanceName,
+			Labels: append(parentEntity.Labels, contracts.Label{
+				Key:   bigtableInstanceKeyName,
+				Value: instanceName,
+			}),
+		})
+	}
+
+	return
+}
+
+func (c *googleCloudClient) GetBigTableClusters(ctx context.Context, parentEntity *contracts.CatalogEntity) (clusters []*contracts.CatalogEntity, err error) {
+	log.Debug().Msgf("Retrieving BigTable clusters for project %v and instance %v", parentEntity.ParentValue, parentEntity.Value)
+
+	googleBigTableClusters := make([]*bigtableadminv2.Cluster, 0)
+	nextPageToken := ""
+
+	for {
+		// retrieving cloud sql instances (by page)
+		listCall := c.bigtableadminv2Service.Projects.Instances.Clusters.List(fmt.Sprintf("projects/%v/instances/%v", parentEntity.ParentValue, parentEntity.Value))
+		if nextPageToken != "" {
+			listCall.PageToken(nextPageToken)
+		}
+
+		resp, err := listCall.Do()
+		if err != nil {
+			return c.substituteErrorsToIgnore(clusters, err)
+		}
+
+		googleBigTableClusters = append(googleBigTableClusters, resp.Clusters...)
+
+		if resp.NextPageToken == "" {
+			break
+		}
+		nextPageToken = resp.NextPageToken
+	}
+
+	clusters = make([]*contracts.CatalogEntity, 0)
+	for _, cluster := range googleBigTableClusters {
+
+		// projects/{project}/instances/{instance}/clusters/a-z*
+		clusterNameParts := strings.Split(cluster.Name, "/")
+		if len(clusterNameParts) == 0 {
+			return clusters, fmt.Errorf("Bigtable cluster name '%v' is incorrect", cluster.Name)
+		}
+		clusterName := clusterNameParts[len(clusterNameParts)-1]
+
+		clusters = append(clusters, &contracts.CatalogEntity{
+			ParentKey:   parentEntity.Key,
+			ParentValue: parentEntity.Value,
+			Key:         bigtableClusterKeyName,
+			Value:       clusterName,
+			Labels: append(parentEntity.Labels, contracts.Label{
+				Key:   bigtableClusterKeyName,
+				Value: clusterName,
+			}, contracts.Label{
+				Key:   locationLabelKey,
+				Value: cluster.Location,
 			}),
 		})
 	}

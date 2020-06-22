@@ -141,6 +141,27 @@ func (e *extractor) runClouds(ctx context.Context, parentEntity *contracts.Catal
 			return desiredProjects, err
 		}
 
+		// fetch bigtable instances for each project
+		err = e.loopEntitiesInParallel(ctx, 5, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) ([]*contracts.CatalogEntity, error) {
+			desiredBigTableInstances, err := e.runFunction(ctx, projectKeyName, bigtableInstanceKeyName, entity, e.googleCloudClient.GetBigTableInstances, true)
+			if err != nil {
+				return desiredBigTableInstances, err
+			}
+
+			// fetch bigtable clusters for each instance
+			err = e.loopEntitiesInParallel(ctx, 2, desiredBigTableInstances, func(ctx context.Context, entity *contracts.CatalogEntity) ([]*contracts.CatalogEntity, error) {
+				return e.runFunction(ctx, bigtableInstanceKeyName, bigtableClusterKeyName, entity, e.googleCloudClient.GetBigTableClusters, true)
+			})
+			if err != nil {
+				return desiredBigTableInstances, err
+			}
+
+			return desiredBigTableInstances, nil
+		})
+		if err != nil {
+			return desiredProjects, err
+		}
+
 		// fetch bigquery datasets for each project
 		err = e.loopEntitiesInParallel(ctx, 5, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) ([]*contracts.CatalogEntity, error) {
 			desiredBigQueryDatasets, err := e.runFunction(ctx, projectKeyName, bigqueryDatasetKeyName, entity, e.googleCloudClient.GetBigqueryDatasets, true)

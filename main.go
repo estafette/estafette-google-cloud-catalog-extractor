@@ -44,6 +44,8 @@ const (
 	bigqueryTableKeyName    = "bigquery-table"
 	cloudsqlInstanceKeyName = "cloudsql-instance"
 	cloudsqlDatabaseKeyName = "cloudsql-database"
+	bigtableInstanceKeyName = "bigtable-instance"
+	bigtableClusterKeyName  = "bigtable-cluster"
 )
 
 const cloudKeyValue = "Google Cloud"
