@@ -426,12 +426,10 @@ func (c *googleCloudClient) GetBigqueryDatasets(ctx context.Context, parentEntit
 	datasets = make([]*contracts.CatalogEntity, 0)
 	for _, dataset := range googleBigqueryDatasets {
 		datasetIDParts := strings.Split(dataset.Id, ":")
-		datasetID := ""
-		if len(datasetIDParts) > 1 {
-			datasetID = datasetIDParts[1]
-		} else if len(datasetIDParts) > 0 {
-			datasetID = datasetIDParts[0]
+		if len(datasetIDParts) == 0 {
+			return datasets, fmt.Errorf("Dataset id '%v' is incorrect", dataset.Id)
 		}
+		datasetID := datasetIDParts[len(datasetIDParts)-1]
 
 		datasets = append(datasets, &contracts.CatalogEntity{
 			ParentKey:   parentEntity.Key,
