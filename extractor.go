@@ -148,8 +148,8 @@ func (e *extractor) runClouds(ctx context.Context, parentEntity *contracts.Catal
 				return desiredBigQueryDatasets, err
 			}
 
-			// fetch cloud sql databases for each instance
-			err = e.loopEntitiesInParallel(ctx, 5, desiredBigQueryDatasets, func(ctx context.Context, entity *contracts.CatalogEntity) ([]*contracts.CatalogEntity, error) {
+			// fetch bigquery tables for each dataset
+			err = e.loopEntitiesInParallel(ctx, 2, desiredBigQueryDatasets, func(ctx context.Context, entity *contracts.CatalogEntity) ([]*contracts.CatalogEntity, error) {
 				return e.runFunction(ctx, bigqueryDatasetKeyName, bigqueryTableKeyName, entity, e.googleCloudClient.GetBigqueryTables, true)
 			})
 			if err != nil {
@@ -170,7 +170,7 @@ func (e *extractor) runClouds(ctx context.Context, parentEntity *contracts.Catal
 			}
 
 			// fetch cloud sql databases for each instance
-			err = e.loopEntitiesInParallel(ctx, 5, desiredCloudSQLInstances, func(ctx context.Context, entity *contracts.CatalogEntity) ([]*contracts.CatalogEntity, error) {
+			err = e.loopEntitiesInParallel(ctx, 2, desiredCloudSQLInstances, func(ctx context.Context, entity *contracts.CatalogEntity) ([]*contracts.CatalogEntity, error) {
 				return e.runFunction(ctx, cloudsqlInstanceKeyName, cloudsqlDatabaseKeyName, entity, e.googleCloudClient.GetCloudSQLDatabases, true)
 			})
 			if err != nil {
