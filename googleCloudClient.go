@@ -477,14 +477,20 @@ func (c *googleCloudClient) GetBigqueryTables(ctx context.Context, parentEntity 
 
 	tables = make([]*contracts.CatalogEntity, 0)
 	for _, table := range googleBigqueryTables {
+		tableIDParts := strings.Split(table.Id, ":")
+		if len(tableIDParts) == 0 {
+			return tables, fmt.Errorf("Table id '%v' is incorrect", table.Id)
+		}
+		tableID := tableIDParts[len(tableIDParts)-1]
+
 		tables = append(tables, &contracts.CatalogEntity{
 			ParentKey:   parentEntity.Key,
 			ParentValue: parentEntity.Value,
 			Key:         bigqueryTableKeyName,
-			Value:       table.Id,
+			Value:       tableID,
 			Labels: append(parentEntity.Labels, contracts.Label{
 				Key:   bigqueryTableKeyName,
-				Value: table.Id,
+				Value: tableID,
 			}),
 		})
 	}
