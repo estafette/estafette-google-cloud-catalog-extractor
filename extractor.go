@@ -174,7 +174,7 @@ func (e *extractor) runClouds(ctx context.Context, parentEntity *contracts.Catal
 				return e.runFunction(ctx, cloudsqlInstanceKeyName, cloudsqlDatabaseKeyName, entity, e.googleCloudClient.GetCloudSQLDatabases, true)
 			})
 			if err != nil {
-				return desiredProjects, err
+				return desiredCloudSQLInstances, err
 			}
 
 			return desiredCloudSQLInstances, nil

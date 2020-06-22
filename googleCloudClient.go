@@ -444,7 +444,7 @@ func (c *googleCloudClient) GetBigqueryDatasets(ctx context.Context, parentEntit
 }
 
 func (c *googleCloudClient) GetBigqueryTables(ctx context.Context, parentEntity *contracts.CatalogEntity) (tables []*contracts.CatalogEntity, err error) {
-	log.Debug().Msgf("Retrieving BigQuery tables for project %v", parentEntity.Value)
+	log.Debug().Msgf("Retrieving BigQuery tables for project %v and dataset %v", parentEntity.ParentValue, parentEntity.Value)
 
 	googleBigqueryTables := make([]*bigqueryv2.TableListTables, 0)
 	nextPageToken := ""
@@ -533,7 +533,7 @@ func (c *googleCloudClient) GetCloudSQLDatabaseInstances(ctx context.Context, pa
 }
 
 func (c *googleCloudClient) GetCloudSQLDatabases(ctx context.Context, parentEntity *contracts.CatalogEntity) (databases []*contracts.CatalogEntity, err error) {
-	log.Debug().Msgf("Retrieving Cloud SQL databases for instance %v", parentEntity.Value)
+	log.Debug().Msgf("Retrieving Cloud SQL databases for project %v and instance %v", parentEntity.ParentValue, parentEntity.Value)
 
 	googleCloudSQLDatabases := make([]*sqlv1beta4.Database, 0)
 
