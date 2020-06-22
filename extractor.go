@@ -163,14 +163,14 @@ func (e *extractor) runClouds(ctx context.Context, parentEntity *contracts.Catal
 		}
 
 		// fetch cloudsql instances for each project
-		err = e.loopEntitiesInParallel(ctx, 5, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) ([]*contracts.CatalogEntity, error) {
+		err = e.loopEntitiesInParallel(ctx, 2, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) ([]*contracts.CatalogEntity, error) {
 			desiredCloudSQLInstances, err := e.runFunction(ctx, projectKeyName, cloudsqlInstanceKeyName, entity, e.googleCloudClient.GetCloudSQLDatabaseInstances, true)
 			if err != nil {
 				return desiredCloudSQLInstances, err
 			}
 
 			// fetch cloud sql databases for each instance
-			err = e.loopEntitiesInParallel(ctx, 2, desiredCloudSQLInstances, func(ctx context.Context, entity *contracts.CatalogEntity) ([]*contracts.CatalogEntity, error) {
+			err = e.loopEntitiesInParallel(ctx, 1, desiredCloudSQLInstances, func(ctx context.Context, entity *contracts.CatalogEntity) ([]*contracts.CatalogEntity, error) {
 				return e.runFunction(ctx, cloudsqlInstanceKeyName, cloudsqlDatabaseKeyName, entity, e.googleCloudClient.GetCloudSQLDatabases, true)
 			})
 			if err != nil {
