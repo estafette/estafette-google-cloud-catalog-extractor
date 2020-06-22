@@ -94,89 +94,96 @@ func (e *extractor) runClouds(ctx context.Context, parentEntity *contracts.Catal
 		return err
 	}
 
-	// fetch projects for each cloud
-	err = e.loopEntitiesInParallel(ctx, 10, desiredClouds, func(ctx context.Context, entity *contracts.CatalogEntity) error {
-		return e.runProjects(ctx, entity)
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (e *extractor) runProjects(ctx context.Context, parentEntity *contracts.CatalogEntity) (err error) {
-
-	if parentEntity.Key != cloudKeyName {
-		return fmt.Errorf("Parent key is invalid; %v instead of %v", parentEntity.Key, cloudKeyName)
-	}
-
-	currentProjects, err := e.apiClient.GetCatalogEntities(ctx, parentEntity.Key, parentEntity.Value, projectKeyName)
-	if err != nil {
-		return err
-	}
-
-	desiredProjects, err := e.googleCloudClient.GetProjects(ctx, parentEntity)
-	if err != nil {
-		return err
-	}
-
-	err = e.syncEntities(ctx, currentProjects, desiredProjects, true)
-	if err != nil {
-		return err
-	}
-
 	// fetch gke clusters for each project
-	err = e.loopEntitiesInParallel(ctx, 5, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) error {
-		return e.runFunction(ctx, projectKeyName, gkeClusterKeyName, entity, e.googleCloudClient.GetGKEClusters, true)
-	})
-	if err != nil {
-		return err
-	}
+	err = e.loopEntitiesInParallel(ctx, 10, desiredClouds, func(ctx context.Context, entity *contracts.CatalogEntity) ([]*contracts.CatalogEntity, error) {
+		desiredProjects, err := e.runFunction(ctx, cloudKeyName, projectKeyName, entity, e.googleCloudClient.GetProjects, true)
+		if err != nil {
+			return desiredProjects, err
+		}
 
-	// fetch pubsub topics for each project
-	err = e.loopEntitiesInParallel(ctx, 5, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) error {
-		return e.runFunction(ctx, projectKeyName, pubsubTopicKeyName, entity, e.googleCloudClient.GetPubSubTopics, true)
-	})
-	if err != nil {
-		return err
-	}
+		// fetch gke clusters for each project
+		err = e.loopEntitiesInParallel(ctx, 5, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) ([]*contracts.CatalogEntity, error) {
+			return e.runFunction(ctx, projectKeyName, gkeClusterKeyName, entity, e.googleCloudClient.GetGKEClusters, true)
+		})
+		if err != nil {
+			return desiredProjects, err
+		}
 
-	// fetch cloud functions for each project
-	err = e.loopEntitiesInParallel(ctx, 5, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) error {
-		return e.runFunction(ctx, projectKeyName, cloudfunctionKeyName, entity, e.googleCloudClient.GetCloudFunctions, true)
-	})
-	if err != nil {
-		return err
-	}
+		// fetch pubsub topics for each project
+		err = e.loopEntitiesInParallel(ctx, 5, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) ([]*contracts.CatalogEntity, error) {
+			return e.runFunction(ctx, projectKeyName, pubsubTopicKeyName, entity, e.googleCloudClient.GetPubSubTopics, true)
+		})
+		if err != nil {
+			return desiredProjects, err
+		}
 
-	// fetch storage buckets for each project
-	err = e.loopEntitiesInParallel(ctx, 5, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) error {
-		return e.runFunction(ctx, projectKeyName, storageBucketKeyName, entity, e.googleCloudClient.GetStorageBuckets, true)
-	})
-	if err != nil {
-		return err
-	}
+		// fetch cloud functions for each project
+		err = e.loopEntitiesInParallel(ctx, 5, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) ([]*contracts.CatalogEntity, error) {
+			return e.runFunction(ctx, projectKeyName, cloudfunctionKeyName, entity, e.googleCloudClient.GetCloudFunctions, true)
+		})
+		if err != nil {
+			return desiredProjects, err
+		}
 
-	// fetch dataflow jobs for each project
-	err = e.loopEntitiesInParallel(ctx, 5, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) error {
-		return e.runFunction(ctx, projectKeyName, dataflowJobKeyName, entity, e.googleCloudClient.GetDataflowJobs, true)
-	})
-	if err != nil {
-		return err
-	}
+		// fetch storage buckets for each project
+		err = e.loopEntitiesInParallel(ctx, 5, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) ([]*contracts.CatalogEntity, error) {
+			return e.runFunction(ctx, projectKeyName, storageBucketKeyName, entity, e.googleCloudClient.GetStorageBuckets, true)
+		})
+		if err != nil {
+			return desiredProjects, err
+		}
 
-	// fetch bigquery datasets for each project
-	err = e.loopEntitiesInParallel(ctx, 5, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) error {
-		return e.runFunction(ctx, projectKeyName, bigqueryDatasetKeyName, entity, e.googleCloudClient.GetBigqueryDatasets, true)
-	})
-	if err != nil {
-		return err
-	}
+		// fetch dataflow jobs for each project
+		err = e.loopEntitiesInParallel(ctx, 5, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) ([]*contracts.CatalogEntity, error) {
+			return e.runFunction(ctx, projectKeyName, dataflowJobKeyName, entity, e.googleCloudClient.GetDataflowJobs, true)
+		})
+		if err != nil {
+			return desiredProjects, err
+		}
 
-	// fetch cloudsql instances for each project
-	err = e.loopEntitiesInParallel(ctx, 5, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) error {
-		return e.runFunction(ctx, projectKeyName, cloudsqlInstanceKeyName, entity, e.googleCloudClient.GetCloudSQLDatabaseInstances, true)
+		// fetch bigquery datasets for each project
+		err = e.loopEntitiesInParallel(ctx, 5, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) ([]*contracts.CatalogEntity, error) {
+			desiredBigQueryDatasets, err := e.runFunction(ctx, projectKeyName, bigqueryDatasetKeyName, entity, e.googleCloudClient.GetBigqueryDatasets, true)
+			if err != nil {
+				return desiredBigQueryDatasets, err
+			}
+
+			// fetch cloud sql databases for each instance
+			err = e.loopEntitiesInParallel(ctx, 5, desiredBigQueryDatasets, func(ctx context.Context, entity *contracts.CatalogEntity) ([]*contracts.CatalogEntity, error) {
+				return e.runFunction(ctx, bigqueryDatasetKeyName, bigqueryTableKeyName, entity, e.googleCloudClient.GetBigqueryTables, true)
+			})
+			if err != nil {
+				return desiredBigQueryDatasets, err
+			}
+
+			return desiredBigQueryDatasets, nil
+		})
+		if err != nil {
+			return desiredProjects, err
+		}
+
+		// fetch cloudsql instances for each project
+		err = e.loopEntitiesInParallel(ctx, 5, desiredProjects, func(ctx context.Context, entity *contracts.CatalogEntity) ([]*contracts.CatalogEntity, error) {
+			desiredCloudSQLInstances, err := e.runFunction(ctx, projectKeyName, cloudsqlInstanceKeyName, entity, e.googleCloudClient.GetCloudSQLDatabaseInstances, true)
+			if err != nil {
+				return desiredCloudSQLInstances, err
+			}
+
+			// fetch cloud sql databases for each instance
+			err = e.loopEntitiesInParallel(ctx, 5, desiredCloudSQLInstances, func(ctx context.Context, entity *contracts.CatalogEntity) ([]*contracts.CatalogEntity, error) {
+				return e.runFunction(ctx, cloudsqlInstanceKeyName, cloudsqlDatabaseKeyName, entity, e.googleCloudClient.GetCloudSQLDatabases, true)
+			})
+			if err != nil {
+				return desiredProjects, err
+			}
+
+			return desiredCloudSQLInstances, nil
+		})
+		if err != nil {
+			return desiredProjects, err
+		}
+
+		return desiredProjects, nil
 	})
 	if err != nil {
 		return err
@@ -237,43 +244,50 @@ func (e *extractor) syncEntities(ctx context.Context, currentEntities []*contrac
 	return nil
 }
 
-func (e *extractor) runFunction(ctx context.Context, acceptedParentKeyName, currentEntityKeyName string, parentEntity *contracts.CatalogEntity, desiredEntitiesFunc func(ctx context.Context, parentEntity *contracts.CatalogEntity) (desiredEntities []*contracts.CatalogEntity, err error), deleteIfNotDesired bool) (err error) {
+func (e *extractor) runFunction(ctx context.Context, acceptedParentKeyName, currentEntityKeyName string, parentEntity *contracts.CatalogEntity, desiredEntitiesFunc func(ctx context.Context, parentEntity *contracts.CatalogEntity) (desiredEntities []*contracts.CatalogEntity, err error), deleteIfNotDesired bool) (desiredEntities []*contracts.CatalogEntity, err error) {
+
+	desiredEntities = make([]*contracts.CatalogEntity, 0)
 
 	if parentEntity.Key != acceptedParentKeyName {
-		return fmt.Errorf("Parent key is invalid; %v instead of %v", parentEntity.Key, acceptedParentKeyName)
+		return desiredEntities, fmt.Errorf("Parent key is invalid; %v instead of %v", parentEntity.Key, acceptedParentKeyName)
 	}
 
-	desiredEntities, err := desiredEntitiesFunc(ctx, parentEntity)
+	desiredEntities, err = desiredEntitiesFunc(ctx, parentEntity)
 	if err != nil {
 		if errors.Is(err, ErrAPINotEnabled) || errors.Is(err, ErrUnknownProjectID) || errors.Is(err, ErrProjectNotFound) || errors.Is(err, ErrEntityNotFound) {
 			// ignoring some api errors that seem to be thrown for various reasons
 			log.Warn().Err(err).Msgf("Failed retrieving desired entities of type %v, but ignoring error", currentEntityKeyName)
-			return nil
+			return desiredEntities, nil
 		}
 
 		log.Warn().Err(err).Msgf("Failed retrieving desired entities of type %v", currentEntityKeyName)
 
-		return err
+		return desiredEntities, err
 	}
 
 	currentEntities, err := e.apiClient.GetCatalogEntities(ctx, parentEntity.Key, parentEntity.Value, currentEntityKeyName)
 	if err != nil {
-		return err
+		return desiredEntities, err
 	}
 
 	err = e.syncEntities(ctx, currentEntities, desiredEntities, deleteIfNotDesired)
 	if err != nil {
-		return err
+		return desiredEntities, err
 	}
 
-	return nil
+	return desiredEntities, nil
 }
 
-func (e *extractor) loopEntitiesInParallel(ctx context.Context, concurrency int, entities []*contracts.CatalogEntity, runFunction func(ctx context.Context, entity *contracts.CatalogEntity) error) (err error) {
+func (e *extractor) loopEntitiesInParallel(ctx context.Context, concurrency int, entities []*contracts.CatalogEntity, runFunction func(ctx context.Context, entity *contracts.CatalogEntity) (desiredEntities []*contracts.CatalogEntity, err error)) (err error) {
 	// http://jmoiron.net/blog/limiting-concurrency-in-go/
 	semaphore := make(chan bool, concurrency)
 
-	resultChannel := make(chan error, len(entities))
+	type result struct {
+		desiredEntities []*contracts.CatalogEntity
+		err             error
+	}
+
+	resultChannel := make(chan result, len(entities))
 
 	for _, entity := range entities {
 		// try to fill semaphore up to it's full size otherwise wait for a routine to finish
@@ -282,7 +296,8 @@ func (e *extractor) loopEntitiesInParallel(ctx context.Context, concurrency int,
 		go func(ctx context.Context, entity *contracts.CatalogEntity) {
 			// lower semaphore once the routine's finished, making room for another one to start
 			defer func() { <-semaphore }()
-			resultChannel <- runFunction(ctx, entity)
+			desiredEntities, err := runFunction(ctx, entity)
+			resultChannel <- result{desiredEntities: desiredEntities, err: err}
 		}(ctx, entity)
 	}
 
@@ -292,9 +307,9 @@ func (e *extractor) loopEntitiesInParallel(ctx context.Context, concurrency int,
 	}
 
 	close(resultChannel)
-	for err := range resultChannel {
-		if err != nil {
-			return err
+	for result := range resultChannel {
+		if result.err != nil {
+			return result.err
 		}
 	}
 

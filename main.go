@@ -43,6 +43,7 @@ const (
 	bigqueryDatasetKeyName  = "bigquery-dataset"
 	bigqueryTableKeyName    = "bigquery-table"
 	cloudsqlInstanceKeyName = "cloudsql-instance"
+	cloudsqlDatabaseKeyName = "cloudsql-database"
 )
 
 const cloudKeyValue = "Google Cloud"

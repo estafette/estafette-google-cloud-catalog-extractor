@@ -45,7 +45,9 @@ type GoogleCloudClient interface {
 	GetStorageBuckets(ctx context.Context, parentEntity *contracts.CatalogEntity) (buckets []*contracts.CatalogEntity, err error)
 	GetDataflowJobs(ctx context.Context, parentEntity *contracts.CatalogEntity) (jobs []*contracts.CatalogEntity, err error)
 	GetBigqueryDatasets(ctx context.Context, parentEntity *contracts.CatalogEntity) (datasets []*contracts.CatalogEntity, err error)
+	GetBigqueryTables(ctx context.Context, parentEntity *contracts.CatalogEntity) (tables []*contracts.CatalogEntity, err error)
 	GetCloudSQLDatabaseInstances(ctx context.Context, parentEntity *contracts.CatalogEntity) (instances []*contracts.CatalogEntity, err error)
+	GetCloudSQLDatabases(ctx context.Context, parentEntity *contracts.CatalogEntity) (databases []*contracts.CatalogEntity, err error)
 }
 
 // NewGoogleCloudClient returns a new GoogleCloudClient
@@ -441,14 +443,57 @@ func (c *googleCloudClient) GetBigqueryDatasets(ctx context.Context, parentEntit
 	return
 }
 
+func (c *googleCloudClient) GetBigqueryTables(ctx context.Context, parentEntity *contracts.CatalogEntity) (tables []*contracts.CatalogEntity, err error) {
+	log.Debug().Msgf("Retrieving BigQuery tables for project %v", parentEntity.Value)
+
+	googleBigqueryTables := make([]*bigqueryv2.TableListTables, 0)
+	nextPageToken := ""
+
+	for {
+		// retrieving bigquery tables (by page)
+		listCall := c.bigqueryv2Service.Tables.List(parentEntity.ParentValue, parentEntity.Value)
+		if nextPageToken != "" {
+			listCall.PageToken(nextPageToken)
+		}
+
+		resp, err := listCall.Do()
+		if err != nil {
+			return c.substituteErrorsToIgnore(tables, err)
+		}
+
+		googleBigqueryTables = append(googleBigqueryTables, resp.Tables...)
+
+		if resp.NextPageToken == "" {
+			break
+		}
+		nextPageToken = resp.NextPageToken
+	}
+
+	tables = make([]*contracts.CatalogEntity, 0)
+	for _, table := range googleBigqueryTables {
+		tables = append(tables, &contracts.CatalogEntity{
+			ParentKey:   parentEntity.Key,
+			ParentValue: parentEntity.Value,
+			Key:         bigqueryTableKeyName,
+			Value:       table.Id,
+			Labels: append(parentEntity.Labels, contracts.Label{
+				Key:   bigqueryTableKeyName,
+				Value: table.Id,
+			}),
+		})
+	}
+
+	return
+}
+
 func (c *googleCloudClient) GetCloudSQLDatabaseInstances(ctx context.Context, parentEntity *contracts.CatalogEntity) (instances []*contracts.CatalogEntity, err error) {
-	log.Debug().Msgf("Retrieving BigQuery datasets for project %v", parentEntity.Value)
+	log.Debug().Msgf("Retrieving Cloud SQL instances for project %v", parentEntity.Value)
 
 	googleCloudSQLInstances := make([]*sqlv1beta4.DatabaseInstance, 0)
 	nextPageToken := ""
 
 	for {
-		// retrieving bigquery datasets (by page)
+		// retrieving cloud sql instances (by page)
 		listCall := c.sqlv1beta4Service.Instances.List(parentEntity.Value)
 		if nextPageToken != "" {
 			listCall.PageToken(nextPageToken)
@@ -480,6 +525,37 @@ func (c *googleCloudClient) GetCloudSQLDatabaseInstances(ctx context.Context, pa
 			}, contracts.Label{
 				Key:   locationLabelKey,
 				Value: instance.Region,
+			}),
+		})
+	}
+
+	return
+}
+
+func (c *googleCloudClient) GetCloudSQLDatabases(ctx context.Context, parentEntity *contracts.CatalogEntity) (databases []*contracts.CatalogEntity, err error) {
+	log.Debug().Msgf("Retrieving Cloud SQL databases for instance %v", parentEntity.Value)
+
+	googleCloudSQLDatabases := make([]*sqlv1beta4.Database, 0)
+
+	listCall := c.sqlv1beta4Service.Databases.List(parentEntity.ParentValue, parentEntity.Value)
+
+	resp, err := listCall.Do()
+	if err != nil {
+		return c.substituteErrorsToIgnore(databases, err)
+	}
+
+	googleCloudSQLDatabases = append(googleCloudSQLDatabases, resp.Items...)
+
+	databases = make([]*contracts.CatalogEntity, 0)
+	for _, database := range googleCloudSQLDatabases {
+		databases = append(databases, &contracts.CatalogEntity{
+			ParentKey:   parentEntity.Key,
+			ParentValue: parentEntity.Value,
+			Key:         cloudsqlDatabaseKeyName,
+			Value:       database.Name,
+			Labels: append(parentEntity.Labels, contracts.Label{
+				Key:   cloudsqlDatabaseKeyName,
+				Value: database.Name,
 			}),
 		})
 	}
