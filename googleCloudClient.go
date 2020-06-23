@@ -160,7 +160,7 @@ func (c *googleCloudClient) GetProjects(ctx context.Context, parentEntity *contr
 				return err
 			}
 			return nil
-		}, c.isRetryableErrorCustomOption())
+		}, c.isRetryableErrorCustomOption(), foundation.LastErrorOnly(true))
 		if err != nil {
 			return c.substituteErrorsToIgnore(projects, err)
 		}
@@ -207,7 +207,7 @@ func (c *googleCloudClient) GetGKEClusters(ctx context.Context, parentEntity *co
 			return err
 		}
 		return nil
-	}, c.isRetryableErrorCustomOption())
+	}, c.isRetryableErrorCustomOption(), foundation.LastErrorOnly(true))
 	if err != nil {
 		return c.substituteErrorsToIgnore(clusters, err)
 	}
@@ -257,7 +257,7 @@ func (c *googleCloudClient) GetPubSubTopics(ctx context.Context, parentEntity *c
 				return err
 			}
 			return nil
-		}, c.isRetryableErrorCustomOption())
+		}, c.isRetryableErrorCustomOption(), foundation.LastErrorOnly(true))
 		if err != nil {
 			return c.substituteErrorsToIgnore(topics, err)
 		}
@@ -308,7 +308,7 @@ func (c *googleCloudClient) GetCloudFunctions(ctx context.Context, parentEntity 
 				return err
 			}
 			return nil
-		}, c.isRetryableErrorCustomOption())
+		}, c.isRetryableErrorCustomOption(), foundation.LastErrorOnly(true))
 		if err != nil {
 			return c.substituteErrorsToIgnore(cloudfunctions, err)
 		}
@@ -363,7 +363,7 @@ func (c *googleCloudClient) GetStorageBuckets(ctx context.Context, parentEntity 
 				return err
 			}
 			return nil
-		}, c.isRetryableErrorCustomOption())
+		}, c.isRetryableErrorCustomOption(), foundation.LastErrorOnly(true))
 		if err != nil {
 			return c.substituteErrorsToIgnore(buckets, err)
 		}
@@ -417,7 +417,7 @@ func (c *googleCloudClient) GetDataflowJobs(ctx context.Context, parentEntity *c
 				return err
 			}
 			return nil
-		}, c.isRetryableErrorCustomOption())
+		}, c.isRetryableErrorCustomOption(), foundation.LastErrorOnly(true))
 		if err != nil {
 			return c.substituteErrorsToIgnore(jobs, err)
 		}
@@ -467,7 +467,7 @@ func (c *googleCloudClient) GetBigqueryDatasets(ctx context.Context, parentEntit
 				return err
 			}
 			return nil
-		}, c.isRetryableErrorCustomOption())
+		}, c.isRetryableErrorCustomOption(), foundation.LastErrorOnly(true))
 		if err != nil {
 			return c.substituteErrorsToIgnore(datasets, err)
 		}
@@ -526,7 +526,7 @@ func (c *googleCloudClient) GetBigqueryTables(ctx context.Context, parentEntity 
 				return err
 			}
 			return nil
-		}, c.isRetryableErrorCustomOption())
+		}, c.isRetryableErrorCustomOption(), foundation.LastErrorOnly(true))
 		if err != nil {
 			return c.substituteErrorsToIgnore(tables, err)
 		}
@@ -583,7 +583,7 @@ func (c *googleCloudClient) GetCloudSQLDatabaseInstances(ctx context.Context, pa
 			}
 
 			return nil
-		}, c.isRetryableErrorCustomOption())
+		}, c.isRetryableErrorCustomOption(), foundation.LastErrorOnly(true))
 		if err != nil {
 			return c.substituteErrorsToIgnore(instances, err)
 		}
@@ -630,7 +630,7 @@ func (c *googleCloudClient) GetCloudSQLDatabases(ctx context.Context, parentEnti
 		}
 
 		return nil
-	}, c.isRetryableErrorCustomOption())
+	}, c.isRetryableErrorCustomOption(), foundation.LastErrorOnly(true))
 	if err != nil {
 		return c.substituteErrorsToIgnore(databases, err)
 	}
@@ -675,7 +675,7 @@ func (c *googleCloudClient) GetBigTableInstances(ctx context.Context, parentEnti
 			}
 
 			return nil
-		}, c.isRetryableErrorCustomOption())
+		}, c.isRetryableErrorCustomOption(), foundation.LastErrorOnly(true))
 		if err != nil {
 			return c.substituteErrorsToIgnore(instances, err)
 		}
@@ -733,7 +733,7 @@ func (c *googleCloudClient) GetBigTableClusters(ctx context.Context, parentEntit
 			}
 
 			return nil
-		}, c.isRetryableErrorCustomOption())
+		}, c.isRetryableErrorCustomOption(), foundation.LastErrorOnly(true))
 		if err != nil {
 			return c.substituteErrorsToIgnore(clusters, err)
 		}
