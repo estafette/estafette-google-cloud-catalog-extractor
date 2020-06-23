@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	contracts "github.com/estafette/estafette-ci-contracts"
+	foundation "github.com/estafette/estafette-foundation"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2/google"
 	bigqueryv2 "google.golang.org/api/bigquery/v2"
@@ -146,14 +148,21 @@ func (c *googleCloudClient) GetProjects(ctx context.Context, parentEntity *contr
 
 	for {
 		// retrieving projects (by page)
-		listCall := c.crmv1Service.Projects.List()
-		if nextPageToken != "" {
-			listCall.PageToken(nextPageToken)
-		}
+		var resp *crmv1.ListProjectsResponse
+		err = foundation.Retry(func() error {
+			listCall := c.crmv1Service.Projects.List()
+			if nextPageToken != "" {
+				listCall.PageToken(nextPageToken)
+			}
 
-		resp, err := listCall.Do()
+			resp, err = listCall.Do()
+			if err != nil {
+				return err
+			}
+			return nil
+		}, c.isRetryableErrorCustomOption())
 		if err != nil {
-			return projects, err
+			return c.substituteErrorsToIgnore(projects, err)
 		}
 
 		googleProjects = append(googleProjects, resp.Projects...)
@@ -189,9 +198,16 @@ func (c *googleCloudClient) GetGKEClusters(ctx context.Context, parentEntity *co
 
 	googleClusters := make([]*containerv1.Cluster, 0)
 
-	listCall := c.containerv1Service.Projects.Zones.Clusters.List(parentEntity.Value, "-")
+	var resp *containerv1.ListClustersResponse
+	err = foundation.Retry(func() error {
+		listCall := c.containerv1Service.Projects.Zones.Clusters.List(parentEntity.Value, "-")
 
-	resp, err := listCall.Do()
+		resp, err = listCall.Do()
+		if err != nil {
+			return err
+		}
+		return nil
+	}, c.isRetryableErrorCustomOption())
 	if err != nil {
 		return c.substituteErrorsToIgnore(clusters, err)
 	}
@@ -229,12 +245,19 @@ func (c *googleCloudClient) GetPubSubTopics(ctx context.Context, parentEntity *c
 
 	for {
 		// retrieving pubsub topics (by page)
-		listCall := c.pubsubv1Service.Projects.Topics.List(parentEntity.Value)
-		if nextPageToken != "" {
-			listCall.PageToken(nextPageToken)
-		}
+		var resp *pubsubv1.ListTopicsResponse
+		err = foundation.Retry(func() error {
+			listCall := c.pubsubv1Service.Projects.Topics.List(parentEntity.Value)
+			if nextPageToken != "" {
+				listCall.PageToken(nextPageToken)
+			}
 
-		resp, err := listCall.Do()
+			resp, err = listCall.Do()
+			if err != nil {
+				return err
+			}
+			return nil
+		}, c.isRetryableErrorCustomOption())
 		if err != nil {
 			return c.substituteErrorsToIgnore(topics, err)
 		}
@@ -273,12 +296,19 @@ func (c *googleCloudClient) GetCloudFunctions(ctx context.Context, parentEntity 
 
 	for {
 		// retrieving cloud functions (by page)
-		listCall := c.cloudfunctionsv1Service.Projects.Locations.Functions.List(fmt.Sprintf("projects/%v/locations/-", parentEntity.Value))
-		if nextPageToken != "" {
-			listCall.PageToken(nextPageToken)
-		}
+		var resp *cloudfunctionsv1.ListFunctionsResponse
+		err = foundation.Retry(func() error {
+			listCall := c.cloudfunctionsv1Service.Projects.Locations.Functions.List(fmt.Sprintf("projects/%v/locations/-", parentEntity.Value))
+			if nextPageToken != "" {
+				listCall.PageToken(nextPageToken)
+			}
 
-		resp, err := listCall.Do()
+			resp, err = listCall.Do()
+			if err != nil {
+				return err
+			}
+			return nil
+		}, c.isRetryableErrorCustomOption())
 		if err != nil {
 			return c.substituteErrorsToIgnore(cloudfunctions, err)
 		}
@@ -321,12 +351,19 @@ func (c *googleCloudClient) GetStorageBuckets(ctx context.Context, parentEntity 
 
 	for {
 		// retrieving storage buckets (by page)
-		listCall := c.storagev1Service.Buckets.List(parentEntity.Value)
-		if nextPageToken != "" {
-			listCall.PageToken(nextPageToken)
-		}
+		var resp *storagev1.Buckets
+		err = foundation.Retry(func() error {
+			listCall := c.storagev1Service.Buckets.List(parentEntity.Value)
+			if nextPageToken != "" {
+				listCall.PageToken(nextPageToken)
+			}
 
-		resp, err := listCall.Do()
+			resp, err = listCall.Do()
+			if err != nil {
+				return err
+			}
+			return nil
+		}, c.isRetryableErrorCustomOption())
 		if err != nil {
 			return c.substituteErrorsToIgnore(buckets, err)
 		}
@@ -368,12 +405,19 @@ func (c *googleCloudClient) GetDataflowJobs(ctx context.Context, parentEntity *c
 
 	for {
 		// retrieving dataflow jobs (by page)
-		listCall := c.dataflowv1b3Service.Projects.Jobs.List(parentEntity.Value)
-		if nextPageToken != "" {
-			listCall.PageToken(nextPageToken)
-		}
+		var resp *dataflowv1b3.ListJobsResponse
+		err = foundation.Retry(func() error {
+			listCall := c.dataflowv1b3Service.Projects.Jobs.List(parentEntity.Value)
+			if nextPageToken != "" {
+				listCall.PageToken(nextPageToken)
+			}
 
-		resp, err := listCall.Do()
+			resp, err = listCall.Do()
+			if err != nil {
+				return err
+			}
+			return nil
+		}, c.isRetryableErrorCustomOption())
 		if err != nil {
 			return c.substituteErrorsToIgnore(jobs, err)
 		}
@@ -411,12 +455,19 @@ func (c *googleCloudClient) GetBigqueryDatasets(ctx context.Context, parentEntit
 
 	for {
 		// retrieving bigquery datasets (by page)
-		listCall := c.bigqueryv2Service.Datasets.List(parentEntity.Value)
-		if nextPageToken != "" {
-			listCall.PageToken(nextPageToken)
-		}
+		var resp *bigqueryv2.DatasetList
+		err = foundation.Retry(func() error {
+			listCall := c.bigqueryv2Service.Datasets.List(parentEntity.Value)
+			if nextPageToken != "" {
+				listCall.PageToken(nextPageToken)
+			}
 
-		resp, err := listCall.Do()
+			resp, err = listCall.Do()
+			if err != nil {
+				return err
+			}
+			return nil
+		}, c.isRetryableErrorCustomOption())
 		if err != nil {
 			return c.substituteErrorsToIgnore(datasets, err)
 		}
@@ -463,12 +514,19 @@ func (c *googleCloudClient) GetBigqueryTables(ctx context.Context, parentEntity 
 
 	for {
 		// retrieving bigquery tables (by page)
-		listCall := c.bigqueryv2Service.Tables.List(parentEntity.ParentValue, parentEntity.Value)
-		if nextPageToken != "" {
-			listCall.PageToken(nextPageToken)
-		}
+		var resp *bigqueryv2.TableList
+		err = foundation.Retry(func() error {
+			listCall := c.bigqueryv2Service.Tables.List(parentEntity.ParentValue, parentEntity.Value)
+			if nextPageToken != "" {
+				listCall.PageToken(nextPageToken)
+			}
 
-		resp, err := listCall.Do()
+			resp, err = listCall.Do()
+			if err != nil {
+				return err
+			}
+			return nil
+		}, c.isRetryableErrorCustomOption())
 		if err != nil {
 			return c.substituteErrorsToIgnore(tables, err)
 		}
@@ -512,12 +570,20 @@ func (c *googleCloudClient) GetCloudSQLDatabaseInstances(ctx context.Context, pa
 
 	for {
 		// retrieving cloud sql instances (by page)
-		listCall := c.sqlv1beta4Service.Instances.List(parentEntity.Value)
-		if nextPageToken != "" {
-			listCall.PageToken(nextPageToken)
-		}
+		var resp *sqlv1beta4.InstancesListResponse
+		err = foundation.Retry(func() error {
+			listCall := c.sqlv1beta4Service.Instances.List(parentEntity.Value)
+			if nextPageToken != "" {
+				listCall.PageToken(nextPageToken)
+			}
 
-		resp, err := listCall.Do()
+			resp, err = listCall.Do()
+			if err != nil {
+				return err
+			}
+
+			return nil
+		}, c.isRetryableErrorCustomOption())
 		if err != nil {
 			return c.substituteErrorsToIgnore(instances, err)
 		}
@@ -555,9 +621,16 @@ func (c *googleCloudClient) GetCloudSQLDatabases(ctx context.Context, parentEnti
 
 	googleCloudSQLDatabases := make([]*sqlv1beta4.Database, 0)
 
-	listCall := c.sqlv1beta4Service.Databases.List(parentEntity.ParentValue, parentEntity.Value)
+	var resp *sqlv1beta4.DatabasesListResponse
+	err = foundation.Retry(func() error {
+		listCall := c.sqlv1beta4Service.Databases.List(parentEntity.ParentValue, parentEntity.Value)
+		resp, err = listCall.Do()
+		if err != nil {
+			return err
+		}
 
-	resp, err := listCall.Do()
+		return nil
+	}, c.isRetryableErrorCustomOption())
 	if err != nil {
 		return c.substituteErrorsToIgnore(databases, err)
 	}
@@ -589,12 +662,20 @@ func (c *googleCloudClient) GetBigTableInstances(ctx context.Context, parentEnti
 
 	for {
 		// retrieving cloud sql instances (by page)
-		listCall := c.bigtableadminv2Service.Projects.Instances.List(fmt.Sprintf("projects/%v", parentEntity.Value))
-		if nextPageToken != "" {
-			listCall.PageToken(nextPageToken)
-		}
+		var resp *bigtableadminv2.ListInstancesResponse
+		err = foundation.Retry(func() error {
+			listCall := c.bigtableadminv2Service.Projects.Instances.List(fmt.Sprintf("projects/%v", parentEntity.Value))
+			if nextPageToken != "" {
+				listCall.PageToken(nextPageToken)
+			}
 
-		resp, err := listCall.Do()
+			resp, err = listCall.Do()
+			if err != nil {
+				return err
+			}
+
+			return nil
+		}, c.isRetryableErrorCustomOption())
 		if err != nil {
 			return c.substituteErrorsToIgnore(instances, err)
 		}
@@ -639,12 +720,20 @@ func (c *googleCloudClient) GetBigTableClusters(ctx context.Context, parentEntit
 
 	for {
 		// retrieving cloud sql instances (by page)
-		listCall := c.bigtableadminv2Service.Projects.Instances.Clusters.List(fmt.Sprintf("projects/%v/instances/%v", parentEntity.ParentValue, parentEntity.Value))
-		if nextPageToken != "" {
-			listCall.PageToken(nextPageToken)
-		}
+		var resp *bigtableadminv2.ListClustersResponse
+		err = foundation.Retry(func() error {
+			listCall := c.bigtableadminv2Service.Projects.Instances.Clusters.List(fmt.Sprintf("projects/%v/instances/%v", parentEntity.ParentValue, parentEntity.Value))
+			if nextPageToken != "" {
+				listCall.PageToken(nextPageToken)
+			}
 
-		resp, err := listCall.Do()
+			resp, err = listCall.Do()
+			if err != nil {
+				return err
+			}
+
+			return nil
+		}, c.isRetryableErrorCustomOption())
 		if err != nil {
 			return c.substituteErrorsToIgnore(clusters, err)
 		}
@@ -703,4 +792,32 @@ func (c *googleCloudClient) substituteErrorsToIgnore(entities []*contracts.Catal
 	}
 
 	return entities, err
+}
+
+func (c *googleCloudClient) isRetryableErrorCustomOption() foundation.RetryOption {
+	return func(c *foundation.RetryConfig) {
+		c.IsRetryableError = func(err error) bool {
+			switch e := err.(type) {
+			case *googleapi.Error:
+				// Retry on 429 and 5xx, according to
+				// https://cloud.google.com/storage/docs/exponential-backoff.
+				return e.Code == 429 || (e.Code >= 500 && e.Code < 600)
+			case *url.Error:
+				// Retry socket-level errors ECONNREFUSED and ENETUNREACH (from syscall).
+				// Unfortunately the error type is unexported, so we resort to string
+				// matching.
+				retriable := []string{"connection refused", "connection reset"}
+				for _, s := range retriable {
+					if strings.Contains(e.Error(), s) {
+						return true
+					}
+				}
+				return false
+			case interface{ Temporary() bool }:
+				return e.Temporary()
+			default:
+				return false
+			}
+		}
+	}
 }
