@@ -36,8 +36,11 @@ var (
 	// ErrProjectNotFound is returned when an api throws 'googleapi: Error 404: The requested project was not found., notFound'
 	ErrProjectNotFound = errors.New("The project is not found")
 
-	// ErrEntityNotFound is returned when pubsub topics return htlm with a 404
+	// ErrEntityNotFound is returned when pubsub topics return html with a 404
 	ErrEntityNotFound = errors.New("Entity is not found")
+
+	// ErrEntityNotActive is returned when cloud sql instance is not running and its databases cannot be fetched
+	ErrEntityNotActive = errors.New("Entity is not runactivening")
 )
 
 type GoogleCloudClient interface {
@@ -783,6 +786,9 @@ func (c *googleCloudClient) substituteErrorsToIgnore(entities []*contracts.Catal
 	}
 	if googleapiErr, ok := err.(*googleapi.Error); ok && googleapiErr.Code == http.StatusBadRequest && strings.HasSuffix(err.Error(), "has not enabled BigQuery., invalid") {
 		return entities, ErrAPINotEnabled
+	}
+	if googleapiErr, ok := err.(*googleapi.Error); ok && googleapiErr.Code == http.StatusBadRequest && strings.HasSuffix(err.Error(), "Invalid request: Invalid request since instance is not running., invalid") {
+		return entities, ErrEntityNotActive
 	}
 	if googleapiErr, ok := err.(*googleapi.Error); ok && googleapiErr.Code == http.StatusNotFound && err.Error() == "googleapi: Error 404: The requested project was not found., notFound" {
 		return entities, ErrProjectNotFound
