@@ -29,6 +29,7 @@ var (
 
 	// params for gsuiteClient
 	organization = kingpin.Flag("organization", "The name of the Estafette organization these cloud assets belong to.").Envar("ORGANIZATION").Required().String()
+	concurrency  = kingpin.Flag("concurrency", "The number of concurrent actions in various loops.").Default("2").OverrideDefaultFromEnvar("CONCURRENCY").Int()
 )
 
 const (
@@ -72,7 +73,7 @@ func main() {
 	googleCloudClient, err := NewGoogleCloudClient(ctx)
 	handleError(closer, err, "Failed creating GoogleCloudClient")
 
-	extractor := NewExtractor(apiClient, googleCloudClient)
+	extractor := NewExtractor(apiClient, googleCloudClient, *concurrency)
 	err = extractor.Run(ctx, *organization)
 	handleError(closer, err, "Failed running extraction")
 

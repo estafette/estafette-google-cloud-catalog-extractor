@@ -92,6 +92,7 @@ releases:
             CLIENT_ID: estafette.secret(_ltek97NUaWi1Ov9.I6m91RD0Cmyms0c8-0qevf_qmgVHu6HFLTJDSa8p0kZpIvEbH_U3xwB8YCrpPi5vbFcdcg==.dvKti1KgQG7k5lxg7hPLuPv8wwJR6bGcemBFXO51xhllea4RKG_3KEQTDzy2otPSGQRCL4x8XIHPJn2PYxCJso6ZBUbFOnBK3VyMJj8=)
             CLIENT_SECRET: estafette.secret(ufHOFmxko0iJ41df.3M9XoGb5IYv7G5ZrFUGkS9Z8g4HqThdUr0T3yyXXzFUZzT_tyPaS4qMeIsnj2Gb2spTQ3mgfptQCbMMBeLn2XYjfvlkwx2vDIBKxF32jyMQ=.4fMShWHoYLn7JNc8EgKuTv0woLeiYzIWjW74xhPChXohxCu297ao-PU8BbXjw3felK3FkDgAgMUzNvQIO_gHFdnWVrH4nFWsx7a9b7A=)
             ORGANIZATION: estafette.secret(kl4_znh9HMeqykGz.9WnQtdfd3p4aqFwCvMEES2e5GVfxFQ==.xnLFq8vHB3AWUiMJ9ZdKX0aFwiWkWNCN2J-VIW59v7o-ggtiWdZ1q6VXt7MMGEjeHJEQwgF4Jrx3FZey0Z--HWOXD48gko9UxeQ3dUw=)
+            CONCURRENCY: 2
             JAEGER_SAMPLER_TYPE: probabilistic
             JAEGER_SAMPLER_PARAM: 0.5
             ESTAFETTE_LOG_FORMAT: v3
